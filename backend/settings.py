@@ -95,9 +95,9 @@ DATABASES = {
         'USER': os.environ.get('DB_USER'),
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT', '4000'),
+        'PORT': int(os.environ.get('DB_PORT', 4000)),
         'OPTIONS': {
-            'ssl': {}  # 🌟 เวทมนตร์สั่ง PyMySQL ให้เปิดระบบความปลอดภัยโดยไม่บ่น
+            'ssl': {}  
         }
     }
 }

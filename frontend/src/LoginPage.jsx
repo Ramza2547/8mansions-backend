@@ -13,7 +13,7 @@ function LoginPage() {
     setErrorMessage(''); 
     
     try {
-const response = await fetch('https://8mansions-backend.onrender.com/api/login/', {
+const response = await fetch('https://eightmansions-backend.onrender.com/api/login/', {
     method: 'POST', // บอกเซิร์ฟเวอร์ว่าเรากำลัง "ส่ง" ข้อมูลไปให้เช็ค
     headers: {
         'Content-Type': 'application/json', // บอกว่าข้อมูลที่ส่งไปเป็นรูปแบบ JSON

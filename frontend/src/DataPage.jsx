@@ -9,14 +9,15 @@ function DataPage() {
   // ตัวแปรสำหรับฟอร์มเพิ่มลูกค้าใหม่ (ปรับชื่อฟิลด์ให้ตรงกับ Database ของคุณนะครับ)
   const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '' });
 
-  // 1. ดึงข้อมูลทันทีที่เปิดหน้านี้
+// 1. ดึงข้อมูลทันทีที่เปิดหน้านี้
   useEffect(() => {
     fetchCustomers();
   }, []);
 
   const fetchCustomers = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/customers/');
+      // 🚨 เปลี่ยนที่อยู่จาก 127.0.0.1 เป็นลิงก์ของ Render
+      const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
       setCustomers(response.data);
     } catch (error) {
       console.error("ดึงข้อมูลไม่สำเร็จ", error);
@@ -26,7 +27,8 @@ function DataPage() {
   // 2. ฟังก์ชันเพิ่มลูกค้า
   const handleAddCustomer = async () => {
     try {
-      await axios.post('http://127.0.0.1:8000/api/customers/', newCustomer);
+      // 🚨 เปลี่ยนที่อยู่ตรงนี้ด้วยเหมือนกันครับ
+      await axios.post('https://eightmansions-backend.onrender.com/api/customers/', newCustomer);
       alert('เพิ่มลูกค้ารายใหม่สำเร็จ!');
       setNewCustomer({ first_name: '', last_name: '', phone: '' }); // เคลียร์ช่องพิมพ์
       fetchCustomers(); // โหลดตารางใหม่
@@ -39,7 +41,7 @@ function DataPage() {
   const handleDelete = async (id) => {
     if(window.confirm('คุณแน่ใจหรือไม่ที่จะลบลูกค้ารายนี้?')) {
       try {
-        await axios.put(`http://127.0.0.1:8000/api/customers/${id}/delete/`);
+        await axios.put(`fetch('https://eightmansions-backend.onrender.com/api/login/'/${id}/delete/`);
         fetchCustomers(); // โหลดตารางใหม่ (คนที่ถูกลบจะหายไป)
       } catch (error) {
         alert('ลบข้อมูลไม่สำเร็จ');

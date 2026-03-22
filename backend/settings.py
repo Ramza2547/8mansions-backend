@@ -143,5 +143,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    "https://8mansions.vercel.app", # สมมติว่านี่คือชื่อเว็บหน้าบ้านที่คุณจะได้
+    "https://8mansions.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
 ]

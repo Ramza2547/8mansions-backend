@@ -13,7 +13,8 @@ function LoginPage() {
     setErrorMessage(''); 
     
     try {
-const response = await axios.post('http://127.0.0.1:8000/api/login/', {
+const response = await // ของใหม่ (บน Cloud)
+  fetch('https://8mansions.vercel.app.onrender.com/api/login/', {
     username: username,
     password: password
 });

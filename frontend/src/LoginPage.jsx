@@ -13,10 +13,15 @@ function LoginPage() {
     setErrorMessage(''); 
     
     try {
-const response = await // ของใหม่ (บน Cloud)
-  fetch('https://8mansions.vercel.app.onrender.com/api/login/', {
-    username: username,
-    password: password
+const response = await fetch('https://8mansions-backend.onrender.com/api/login/', {
+    method: 'POST', // บอกเซิร์ฟเวอร์ว่าเรากำลัง "ส่ง" ข้อมูลไปให้เช็ค
+    headers: {
+        'Content-Type': 'application/json', // บอกว่าข้อมูลที่ส่งไปเป็นรูปแบบ JSON
+    },
+    body: JSON.stringify({ // ห่อข้อมูลให้เป็นข้อความ (String) ก่อนส่ง
+        username: username,
+        password: password
+    })
 });
       const data = response.data;
 

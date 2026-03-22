@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-cd-+$0beqwovvpnwzebe1f0--0q%)-208!%0#_xox=g9)px0--'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # ตอนนี้ใส่ '*' (ดอกจัน) ไปก่อน เพื่อให้เว็บ Render ดึงไปรันได้
 # เดี๋ยวพอเราได้ URL ของ Render มาแล้ว เราค่อยมาเปลี่ยนเป็นชื่อเว็บจริงๆ ครับ

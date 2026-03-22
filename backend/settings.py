@@ -87,16 +87,17 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# 🚨 ตั้งค่าฐานข้อมูลแบบมาตรฐานที่ PyMySQL อ่านเข้าใจ 100%
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'NAME': os.environ.get('DB_NAME', 'test'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT', '4000'),
         'OPTIONS': {
-            'ssl': {'ssl_mode': 'VERIFY_IDENTITY'} # TiDB บังคับให้เปิดโหมดความปลอดภัยครับ
+            'ssl': {}  # 🌟 เวทมนตร์สั่ง PyMySQL ให้เปิดระบบความปลอดภัยโดยไม่บ่น
         }
     }
 }

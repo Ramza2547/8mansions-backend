@@ -16,6 +16,8 @@ import pymysql
 pymysql.install_as_MySQLdb()
 import os
 from dotenv import load_dotenv
+import os
+import dj_database_url # 🚨 อย่าลืม import ตัวนี้นะครับ
 
 load_dotenv()
 
@@ -148,3 +150,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://localhost:5175",
 ]
+# 🚨 บังคับให้ใช้ฐานข้อมูลตามที่ตั้งค่าใน Environment ของ Render เท่านั้น!
+DATABASES = {
+    'default': dj_database_url.config(
+        default=f"mysql://{os.environ.get('DB_USER')}:{os.environ.get('DB_PASSWORD')}@{os.environ.get('DB_HOST')}:{os.environ.get('DB_PORT', 4000)}/{os.environ.get('DB_NAME')}?ssl_mode=VERIFY_IDENTITY"
+    )
+}

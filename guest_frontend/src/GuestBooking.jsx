@@ -5,12 +5,11 @@ import axios from 'axios';
 function GuestBooking() {
   const navigate = useNavigate();
   
-  // สร้าง State สำหรับเก็บข้อมูลที่ลูกค้าพิมพ์เข้ามา
+  // 🎯 ตัวแปรตรงกับ Django Backend เป๊ะๆ 100%
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    name: '',
     nationality: '',
-    dob: '',
+    date_of_birth: '', 
   });
 
   const handleChange = (e) => {
@@ -18,12 +17,11 @@ function GuestBooking() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรชตอนกดปุ่ม
+    e.preventDefault(); 
     try {
-      // ยิงข้อมูลไปให้หลังบ้าน
       await axios.post('https://eightmansions-backend.onrender.com/api/customers/', formData);
       alert('Registration Successful! ลงทะเบียนข้อมูลสำเร็จ 🎉');
-      navigate('/'); // ลงทะเบียนเสร็จให้เด้งกลับไปหน้า Home
+      navigate('/'); 
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง');
@@ -33,7 +31,7 @@ function GuestBooking() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans">
       
-      {/* 🟢 Navbar Section (เหมือนหน้า Home เปี๊ยบ) */}
+      {/* 🟢 Navbar Section */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex justify-between items-stretch w-full min-h-[80px]">
           <div className="flex gap-6 sm:gap-10 items-center px-[5%]">
@@ -53,26 +51,19 @@ function GuestBooking() {
           <h2 className="text-3xl font-bold text-center mb-8 text-[#1A1A1A]">Customer Registration</h2>
           
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            
+            {/* ช่องกรอก Name */}
             <div>
-              <label className="block text-gray-700 font-bold mb-2">First Name (ชื่อ)</label>
+              <label className="block text-gray-700 font-bold mb-2">Name (ชื่อ-นามสกุล)</label>
               <input 
-                type="text" name="first_name" required
-                value={formData.first_name} onChange={handleChange}
+                type="text" name="name" required
+                value={formData.name} onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-[#92B0C3] focus:ring-2 focus:ring-[#92B0C3] transition-all"
-                placeholder="Enter your first name"
+                placeholder="Enter your full name"
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-bold mb-2">Last Name (นามสกุล)</label>
-              <input 
-                type="text" name="last_name" required
-                value={formData.last_name} onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-[#92B0C3] focus:ring-2 focus:ring-[#92B0C3] transition-all"
-                placeholder="Enter your last name"
-              />
-            </div>
-
+            {/* ช่องกรอก Nationality */}
             <div>
               <label className="block text-gray-700 font-bold mb-2">Nationality (สัญชาติ)</label>
               <input 
@@ -83,11 +74,12 @@ function GuestBooking() {
               />
             </div>
 
+            {/* ช่องกรอก Date of Birth */}
             <div>
               <label className="block text-gray-700 font-bold mb-2">Date of Birth (วันเกิด)</label>
               <input 
-                type="date" name="dob" required
-                value={formData.dob} onChange={handleChange}
+                type="date" name="date_of_birth" required
+                value={formData.date_of_birth} onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-[#92B0C3] focus:ring-2 focus:ring-[#92B0C3] transition-all"
               />
             </div>

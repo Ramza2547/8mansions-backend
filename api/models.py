@@ -9,14 +9,14 @@ class User(models.Model):
     def __str__(self):
         return self.username
 
-# 2. ตารางสำหรับเก็บข้อมูลลูกค้า (เพิ่มระบบ Soft Delete แล้ว)
+# 2. ตารางสำหรับเก็บข้อมูลลูกค้า 
 class Customer(models.Model):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    phone = models.CharField(max_length=15)
+    name = models.CharField(max_length=200)        # เปลี่ยนเป็น Name รวม
+    nationality = models.CharField(max_length=100) # เพิ่ม สัญชาติ
+    date_of_birth = models.DateField()             # เพิ่ม วันเกิด (รูปแบบ YYYY-MM-DD)
     
     # คอลัมน์สำหรับ Soft Delete
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.name

@@ -59,7 +59,3 @@ def customer_soft_delete(request, pk):
     customer.is_active = False
     customer.save()
     return Response(status=204)
-
-@api_view(['GET'])
-def customer_list(request):
-    return Response({"message": "Customer list ready"})

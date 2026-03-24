@@ -5,163 +5,119 @@ import { useNavigate } from 'react-router-dom';
 function DataPage() {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
-  
-  // ตัวแปรสำหรับฟอร์มเพิ่มลูกค้าใหม่ (ปรับชื่อฟิลด์ให้ตรงกับ Database ของคุณนะครับ)
-  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', phone: '' });
 
-// 1. ดึงข้อมูลทันทีที่เปิดหน้านี้
+  const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
+
   useEffect(() => {
     fetchCustomers();
   }, []);
 
   const fetchCustomers = async () => {
     try {
-      // 🚨 เปลี่ยนที่อยู่จาก 127.0.0.1 เป็นลิงก์ของ Render
       const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
-      setCustomers(response.data);
+      if (Array.isArray(response.data)) {
+        setCustomers(response.data);
+      } else {
+        setCustomers([]);
+      }
     } catch (error) {
       console.error("ดึงข้อมูลไม่สำเร็จ", error);
+      setCustomers([]);
     }
   };
 
-  // 2. ฟังก์ชันเพิ่มลูกค้า
-  const handleAddCustomer = async () => {
-    try {
-      // 🚨 เปลี่ยนที่อยู่ตรงนี้ด้วยเหมือนกันครับ
-      await axios.post('https://eightmansions-backend.onrender.com/api/customers/', newCustomer);
-      alert('เพิ่มลูกค้ารายใหม่สำเร็จ!');
-      setNewCustomer({ first_name: '', last_name: '', phone: '' }); // เคลียร์ช่องพิมพ์
-      fetchCustomers(); // โหลดตารางใหม่
-    } catch (error) {
-      alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
-    }
-  };
-
-  // 3. ฟังก์ชัน Soft Delete
   const handleDelete = async (id) => {
+    if (!id) {
+      alert('ห้องนี้ยังไม่มีข้อมูลลูกค้าให้ลบครับ');
+      return;
+    }
+    
     if(window.confirm('คุณแน่ใจหรือไม่ที่จะลบลูกค้ารายนี้?')) {
       try {
-        await axios.put(`fetch('https://eightmansions-backend.onrender.com/api/login/'/${id}/delete/`);
-        fetchCustomers(); // โหลดตารางใหม่ (คนที่ถูกลบจะหายไป)
+        await axios.put(`https://eightmansions-backend.onrender.com/api/customers/${id}/delete/`);
+        fetchCustomers(); 
       } catch (error) {
         alert('ลบข้อมูลไม่สำเร็จ');
       }
     }
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F0F0F0' }}>
-      
-      {/* 🟢 แถบเมนูด้านบน (Navbar) */}
-      <nav style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        backgroundColor: '#8FAFC1', // สีฟ้าตามแบบ Figma
-        height: '60px' 
-      }}>
-        
-        {/* เมนูฝั่งซ้าย */}
-        <div style={{ display: 'flex', gap: '30px', paddingLeft: '30px', fontWeight: 'bold', color: '#1A1A1A' }}>
-          <span style={{ cursor: 'pointer' }}>Home</span>
-          {/* ✅ เพิ่ม onClick ตรงนี้เพื่อให้เปลี่ยนไปหน้า /data */}
-          <span 
-            style={{ cursor: 'pointer' }} 
-            onClick={() => navigate('/data')}
-          >
-            Data
-          </span>
-          <span style={{ cursor: 'pointer' }}>Payment</span>
-          <span style={{ cursor: 'pointer' }}>Feedback</span>
-        </div>
+  const handleLogout = () => {
+    navigate('/'); 
+  };
 
-        {/* เมนูฝั่งขวา (Log out และ Logo) */}
-        <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          <span 
-            onClick={handleLogout}
-            style={{ marginRight: '30px', cursor: 'pointer', fontWeight: 'bold', color: '#1A1A1A' }}
-          >
-            Log out
-          </span>
-          {/* กล่องดำพื้นหลังโลโก้ */}
-          <div style={{ backgroundColor: 'black', height: '100%', padding: '0 20px', display: 'flex', alignItems: 'center' }}>
-            <img src="/logo.png" alt="8 Mansions Logo" style={{ height: '40px' }} />
+  return (
+    <div className="flex flex-col min-h-screen bg-[#EAEAEA]">
+      
+      {/* 🟢 Navbar แบบ Responsive เต็มสูบ */}
+      <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
+        {/* ใช้ flex-wrap เพื่อให้มันยืดหยุ่นถ้าจอแคบมากๆ */}
+        <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
+          
+          {/* เมนูฝั่งซ้าย (เล็กลงบนมือถือ, เลื่อนซ้ายขวาได้ถ้าจอแคบจัด) */}
+          <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
+            <span className="cursor-pointer px-1 sm:px-2" onClick={() => navigate('/admin')}>Home</span>
+            <span className="cursor-pointer px-1 sm:px-2 underline">Data</span>
+            <span className="cursor-pointer px-1 sm:px-2">Payment</span>
+            <span className="cursor-pointer px-1 sm:px-2">Feedback</span>
           </div>
+
+          {/* เมนูฝั่งขวา (Log out & Logo) */}
+          <div className="flex items-center ml-auto">
+            <span 
+              onClick={handleLogout}
+              className="mr-3 sm:mr-8 cursor-pointer font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] whitespace-nowrap hover:text-red-700 transition-colors"
+            >
+              Log out
+            </span>
+            <div className="bg-black min-h-[60px] px-3 sm:px-6 flex items-center justify-center">
+              <img src="/logo.png" alt="8 Mansions Logo" className="h-[25px] sm:h-[40px]" />
+            </div>
+          </div>
+
         </div>
       </nav>
 
-      {/* 🔵 พื้นที่จัดการข้อมูล (แบ่งซ้าย-ขวา) */}
-      <div style={{ padding: '40px', display: 'flex', gap: '40px' }}>
+      {/* 🔵 พื้นที่แสดงข้อมูลห้องพัก */}
+      <div className="flex justify-center flex-1 py-8 sm:py-12 px-4 sm:px-10">
         
-        {/* ฝั่งซ้าย: ฟอร์มเพิ่มข้อมูล */}
-        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '300px', height: 'fit-content', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ marginTop: 0, color: '#2C3E50' }}>+ เพิ่มลูกค้าใหม่</h3>
-          <input 
-            type="text" placeholder="ชื่อ (First Name)" 
-            value={newCustomer.first_name} onChange={(e) => setNewCustomer({...newCustomer, first_name: e.target.value})}
-            style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-          />
-          <input 
-            type="text" placeholder="นามสกุล (Last Name)" 
-            value={newCustomer.last_name} onChange={(e) => setNewCustomer({...newCustomer, last_name: e.target.value})}
-            style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-          />
-          <input 
-            type="text" placeholder="เบอร์โทร (Phone)" 
-            value={newCustomer.phone} onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-            style={{ width: '100%', padding: '10px', marginBottom: '20px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-          />
-          <button onClick={handleAddCustomer} style={{ width: '100%', padding: '10px', backgroundColor: '#7BA4B6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            บันทึกข้อมูล
-          </button>
-        </div>
+        {/* 📱 มือถือ: 1 คอลัมน์ | 💻 จอใหญ่: 2 คอลัมน์ */}
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+          
+          {roomNames.map((room, index) => {
+            const cust = customers[index]; 
+            const displayName = cust ? `${cust.first_name} ${cust.last_name}` : '-';
+            const displayNationality = cust?.nationality ? cust.nationality : '-';
+            const displayDob = cust?.dob ? cust.dob : '-';
 
-        {/* ฝั่งขวา: ตารางแสดงข้อมูล */}
-        <div style={{ flex: 1, backgroundColor: 'white', padding: '30px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ marginTop: 0, color: '#2C3E50' }}>รายชื่อลูกค้า (Active)</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F0F0F0', borderBottom: '2px solid #ccc' }}>
-                <th style={{ padding: '12px' }}>ID</th>
-                <th style={{ padding: '12px' }}>ชื่อ - นามสกุล</th>
-                <th style={{ padding: '12px' }}>เบอร์โทร</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((cust) => (
-                <tr key={cust.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '12px' }}>{cust.id}</td>
-                  <td style={{ padding: '12px' }}>{cust.first_name} {cust.last_name}</td>
-                  <td style={{ padding: '12px' }}>{cust.phone}</td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    {/* ปุ่ม Soft Delete */}
-                    <button 
-                      onClick={() => handleDelete(cust.id)}
-                      style={{ padding: '6px 12px', backgroundColor: '#E74C3C', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {customers.length === 0 && <p style={{ textAlign: 'center', color: '#999', marginTop: '20px' }}>ยังไม่มีข้อมูลลูกค้า</p>}
-        </div>
+            return (
+              // 📱 มือถือ: กล่องแนวตั้ง (flex-col) | 💻 จอใหญ่: แนวนอน (sm:flex-row)
+              <div key={room} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 border-l-4 border-transparent hover:border-[#8FAFC1]">
+                
+                {/* ข้อมูลด้านซ้าย */}
+                <div className="text-[14px] sm:text-[16px] text-[#1A1A1A] leading-relaxed mb-4 sm:mb-0 w-full">
+                  <div className="font-extrabold text-[16px] sm:text-[18px] mb-2 text-[#2C3E50]">Room {room}</div>
+                  <div><span className="font-semibold text-gray-600">Name:</span> {displayName}</div>
+                  <div><span className="font-semibold text-gray-600">Nationality:</span> {displayNationality}</div>
+                  <div><span className="font-semibold text-gray-600">Date of birth:</span> {displayDob}</div>
+                </div>
 
+                {/* ปุ่ม Delete สีแดงสด */}
+                {/* 📱 มือถือ: กว้างเต็มปุ่มกดง่าย (w-full) | 💻 จอใหญ่: เล็กกะทัดรัด (sm:w-auto) */}
+                <button 
+                  onClick={() => handleDelete(cust?.id)}
+                  className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-2 sm:py-3 px-6 rounded transition-colors duration-200 text-[14px] sm:text-[16px] shadow-sm active:scale-95"
+                >
+                  Delete
+                </button>
+              </div>
+            );
+          })}
+
+        </div>
       </div>
     </div>
   );
 }
-{/* เมนูฝั่งซ้าย */}
-<div style={{ display: 'flex', gap: '20px', fontWeight: 'bold', alignItems: 'center' }}>
 
-    {/* 🌟 เพิ่ม onClick ตรงนี้เพื่อพากลับไปหน้า Home (Admin Dashboard) */}
-    <span onClick={() => navigate('/admin')} style={{ cursor: 'pointer' }}>Home</span>
-
-    <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Data</span>
-    <span style={{ cursor: 'pointer' }}>Payment</span>
-    <span style={{ cursor: 'pointer' }}>Feedback</span>
-</div>
 export default DataPage;

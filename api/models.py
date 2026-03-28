@@ -15,8 +15,15 @@ class Customer(models.Model):
     nationality = models.CharField(max_length=100) # เพิ่ม สัญชาติ
     date_of_birth = models.DateField()             # เพิ่ม วันเกิด (รูปแบบ YYYY-MM-DD)
     
+    # 🎯 เพิ่ม 2 บรรทัดนี้ สำหรับสัญญาเช่า
+    lease_start = models.DateField(null=True, blank=True) 
+    lease_end = models.DateField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    
     # คอลัมน์สำหรับ Soft Delete
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
+

@@ -51,10 +51,8 @@ function DataPage() {
       
       {/* 🟢 Navbar แบบ Responsive เต็มสูบ */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
-        {/* ใช้ flex-wrap เพื่อให้มันยืดหยุ่นถ้าจอแคบมากๆ */}
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           
-          {/* เมนูฝั่งซ้าย (เล็กลงบนมือถือ, เลื่อนซ้ายขวาได้ถ้าจอแคบจัด) */}
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
             <span className="cursor-pointer px-1 sm:px-2" onClick={() => navigate('/admin')}>Home</span>
             <span className="cursor-pointer px-1 sm:px-2 underline">Data</span>
@@ -62,7 +60,6 @@ function DataPage() {
             <span className="cursor-pointer px-1 sm:px-2">Feedback</span>
           </div>
 
-          {/* เมนูฝั่งขวา (Log out & Logo) */}
           <div className="flex items-center ml-auto">
             <span 
               onClick={handleLogout}
@@ -81,20 +78,18 @@ function DataPage() {
       {/* 🔵 พื้นที่แสดงข้อมูลห้องพัก */}
       <div className="flex justify-center flex-1 py-8 sm:py-12 px-4 sm:px-10">
         
-        {/* 📱 มือถือ: 1 คอลัมน์ | 💻 จอใหญ่: 2 คอลัมน์ */}
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
           
           {roomNames.map((room, index) => {
             const cust = customers[index]; 
-            const displayName = cust ? `${cust.first_name} ${cust.last_name}` : '-';
+            // 🎯 แก้ไขตัวแปรตรงนี้ให้ตรงกับ Database ใหม่ (name, nationality, date_of_birth)
+            const displayName = cust?.name ? cust.name : '-';
             const displayNationality = cust?.nationality ? cust.nationality : '-';
-            const displayDob = cust?.dob ? cust.dob : '-';
+            const displayDob = cust?.date_of_birth ? cust.date_of_birth : '-';
 
             return (
-              // 📱 มือถือ: กล่องแนวตั้ง (flex-col) | 💻 จอใหญ่: แนวนอน (sm:flex-row)
               <div key={room} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 border-l-4 border-transparent hover:border-[#8FAFC1]">
                 
-                {/* ข้อมูลด้านซ้าย */}
                 <div className="text-[14px] sm:text-[16px] text-[#1A1A1A] leading-relaxed mb-4 sm:mb-0 w-full">
                   <div className="font-extrabold text-[16px] sm:text-[18px] mb-2 text-[#2C3E50]">Room {room}</div>
                   <div><span className="font-semibold text-gray-600">Name:</span> {displayName}</div>
@@ -102,8 +97,6 @@ function DataPage() {
                   <div><span className="font-semibold text-gray-600">Date of birth:</span> {displayDob}</div>
                 </div>
 
-                {/* ปุ่ม Delete สีแดงสด */}
-                {/* 📱 มือถือ: กว้างเต็มปุ่มกดง่าย (w-full) | 💻 จอใหญ่: เล็กกะทัดรัด (sm:w-auto) */}
                 <button 
                   onClick={() => handleDelete(cust?.id)}
                   className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-2 sm:py-3 px-6 rounded transition-colors duration-200 text-[14px] sm:text-[16px] shadow-sm active:scale-95"

@@ -13,20 +13,18 @@ function GuestBooking() {
     lease_end: '', 
   });
 
-  const [duration, setDuration] = useState(''); // เก็บระยะเวลาเช่าที่เลือก
+  const [duration, setDuration] = useState(''); 
 
-  // ฟังก์ชันคำนวณวันหมดสัญญาอัตโนมัติ
   const calculateEndDate = (startDate, months) => {
     if (!startDate || !months) return '';
     const date = new Date(startDate);
     date.setMonth(date.getMonth() + parseInt(months));
-    return date.toISOString().split('T')[0]; // คืนค่ากลับเป็นรูปแบบที่ HTML เข้าใจ (yyyy-mm-dd)
+    return date.toISOString().split('T')[0]; 
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // ถ้ามีการเปลี่ยนวันเริ่มสัญญา หรือ เปลี่ยนระยะเวลา ให้คำนวณวันหมดสัญญาใหม่
     if (name === 'lease_start') {
       const newEndDate = calculateEndDate(value, duration);
       setFormData({ ...formData, lease_start: value, lease_end: newEndDate });
@@ -43,11 +41,13 @@ function GuestBooking() {
     e.preventDefault(); 
     try {
       await axios.post('https://eightmansions-backend.onrender.com/api/customers/', formData);
-      alert('Registration Successful! ลงทะเบียนข้อมูลสำเร็จ 🎉');
+      // 🎯 เปลี่ยนแจ้งเตือนเป็น Eng-Thai
+      alert('Registration Successful! (ลงทะเบียนสำเร็จ 🎉)');
       navigate('/'); 
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง');
+      // 🎯 เปลี่ยนแจ้งเตือนเป็น Eng-Thai
+      alert('Registration failed. Please try again. (เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง)');
     }
   };
 
@@ -89,7 +89,6 @@ function GuestBooking() {
                 className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-[#92B0C3]" />
             </div>
 
-            {/* ส่วนที่เพิ่มใหม่: สัญญาเช่า */}
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex flex-col gap-4">
               <h3 className="font-bold text-[#2C3E50] border-b pb-2">Lease Details (ข้อมูลสัญญาเช่า)</h3>
               
@@ -103,7 +102,8 @@ function GuestBooking() {
                 <label className="block text-gray-700 font-semibold mb-2">Lease Duration (ระยะเวลาเช่า)</label>
                 <select name="duration" required value={duration} onChange={handleChange}
                   className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-[#92B0C3] bg-white">
-                  <option value="" disabled>เลือกระยะเวลา</option>
+                  {/* 🎯 แก้ให้เป็น English หลัก ตามด้วย (Thai) */}
+                  <option value="" disabled>Select Duration (เลือกระยะเวลา)</option>
                   <option value="1">1 Month (1 เดือน)</option>
                   <option value="6">6 Months (6 เดือน)</option>
                   <option value="12">1 Year (1 ปี)</option>
@@ -114,7 +114,7 @@ function GuestBooking() {
                 <label className="block text-gray-700 font-semibold mb-2">Lease End Date (วันหมดสัญญา)</label>
                 <input type="date" name="lease_end" required readOnly value={formData.lease_end}
                   className="w-full p-3 border border-gray-300 rounded bg-gray-100 text-gray-500 cursor-not-allowed" 
-                  title="คำนวณอัตโนมัติจากระยะเวลาเช่า" />
+                  title="Calculated automatically (คำนวณอัตโนมัติจากระยะเวลาเช่า)" />
               </div>
             </div>
 

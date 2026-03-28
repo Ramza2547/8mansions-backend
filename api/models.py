@@ -27,6 +27,11 @@ class Customer(models.Model):
     # 🎯 เพิ่มบรรทัดนี้: มันจะจับเวลาปัจจุบันให้อัตโนมัติทุกครั้งที่มีการกด Save Edit ครับ
     updated_at = models.DateTimeField(auto_now=True)
 
+# ข้อมูลผู้เช่าคนที่ 2 (ยอมให้ว่างได้ null=True, blank=True)
+    name_2 = models.CharField(max_length=255, null=True, blank=True)
+    nationality_2 = models.CharField(max_length=100, null=True, blank=True)
+    date_of_birth_2 = models.DateField(null=True, blank=True)
+    
     def __str__(self):
         return self.name
 

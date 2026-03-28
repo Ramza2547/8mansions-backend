@@ -61,9 +61,10 @@ function DataPage() {
       setEditingCustomer(null); 
       setEditingRoom(''); 
       fetchCustomers(); 
-    } catch (error) {
-      console.error('Update error:', error);
-      alert('เกิดข้อผิดพลาดในการแก้ไขข้อมูล');
+   } catch (error) {
+      console.error('Update error:', error.response);
+      // สั่งให้มันโชว์เลยว่าหลังบ้านบ่นเรื่องอะไร!
+      alert('สาเหตุที่พัง: ' + JSON.stringify(error.response?.data || error.message));
     }
   };
 

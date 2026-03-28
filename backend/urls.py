@@ -7,6 +7,7 @@ urlpatterns = [
     path('api/login/', views.login_api), # 🌟 ระวังลืมเครื่องหมาย , ตรงบรรทัดนี้นะครับ!
     path('api/customers/', views.customer_list),
     path('api/customers/<int:pk>/delete/', views.customer_soft_delete),
-    path('customers/<int:pk>/delete/', views.customer_soft_delete),
-    path('customers/<int:pk>/update/', views.customer_update), # 🎯 เพิ่มบรรทัดนี้เข้าไปครับ
+    path('api/customers/<int:pk>/delete/', views.customer_soft_delete),
+    # 🎯 บรรทัดนี้สำคัญมาก! ต้องมีถึงจะอัปเดตได้
+    path('api/customers/<int:pk>/update/', views.customer_update),
 ]

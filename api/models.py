@@ -20,9 +20,12 @@ class Customer(models.Model):
     lease_end = models.DateField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
-    
+
     # คอลัมน์สำหรับ Soft Delete
     is_active = models.BooleanField(default=True)
+
+    # 🎯 เพิ่มบรรทัดนี้: มันจะจับเวลาปัจจุบันให้อัตโนมัติทุกครั้งที่มีการกด Save Edit ครับ
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name

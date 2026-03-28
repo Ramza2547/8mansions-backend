@@ -59,3 +59,20 @@ def customer_soft_delete(request, pk):
     customer.is_active = False
     customer.save()
     return Response(status=204)
+
+# ==========================================
+# 4. ฟังก์ชันแก้ไขข้อมูลลูกค้า (Update)
+# ==========================================
+@api_view(['PUT'])
+def customer_update(request, pk):
+    try:
+        customer = Customer.objects.get(pk=pk)
+    except Customer.DoesNotExist:
+        return Response(status=404)
+        
+    # partial=True หมายถึง อนุญาตให้แก้ไขแค่บางช่องได้
+    serializer = CustomerSerializer(customer, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=400)

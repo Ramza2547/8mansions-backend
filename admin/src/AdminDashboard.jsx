@@ -16,9 +16,9 @@ function AdminDashboard() {
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
             <span className="cursor-pointer px-1 sm:px-2 underline">Home</span>
             <span className="cursor-pointer px-1 sm:px-2" onClick={() => navigate('/data')}>Data</span>
-            {/* 🎯 เพิ่ม onClick ตรงนี้ครับ */}
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/payment')}>Payment</span>
-            <span className="cursor-pointer px-1 sm:px-2">Feedback</span>
+            {/* 🎯 เติม onClick ตรงนี้ครับ */}
+            <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
 
           <div className="flex items-center ml-auto">

@@ -2,6 +2,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import User, Customer
 from .serializers import CustomerSerializer
+from .models import Feedback
+from .serializers import FeedbackSerializer
+from rest_framework import viewsets
 
 # ==========================================
 # 1. ฟังก์ชันสำหรับระบบ Login (ฝังโค้ดสายลับไว้แล้ว)
@@ -76,3 +79,7 @@ def customer_update(request, pk):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
+
+class FeedbackViewSet(viewsets.ModelViewSet):
+    queryset = Feedback.objects.all().order_by('-created_at') # เรียงจากใหม่ไปเก่า
+    serializer_class = FeedbackSerializer

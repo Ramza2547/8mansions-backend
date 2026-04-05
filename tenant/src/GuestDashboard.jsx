@@ -12,9 +12,11 @@ function GuestDashboard() {
           
           {/* Menu Items */}
           <div className="flex gap-6 sm:gap-10 items-center px-[5%]">
-            <span className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Home</span>
+            {/* 🎯 เติม onClick ให้ Home */}
+            <span onClick={() => navigate('/')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black underline underline-offset-4 decoration-2">Home</span>
             <span onClick={() => navigate('/booking')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Booking</span>
-            <span className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Comment</span>
+            {/* 🎯 เติม onClick ให้ Comment */}
+            <span onClick={() => navigate('/comment')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Comment</span>
           </div>
 
           {/* Black Logo Container */}

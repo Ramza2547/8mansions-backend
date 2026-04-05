@@ -146,11 +146,11 @@ function DataPage() {
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
-            <span className="cursor-pointer px-1 sm:px-2" onClick={() => navigate('/admin')}>Home</span>
+            <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin')}>Home</span>
             <span className="cursor-pointer px-1 sm:px-2 underline">Data</span>
-            {/* 🎯 เพิ่ม onClick ตรงนี้ครับ */}
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/payment')}>Payment</span>
-            <span className="cursor-pointer px-1 sm:px-2">Feedback</span>
+            {/* 🎯 เพิ่ม onClick ให้ Feedback */}
+            <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
             <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] whitespace-nowrap hover:text-red-700 transition-colors">Log out</span>
@@ -186,7 +186,6 @@ function DataPage() {
                   <div className="text-[14px] sm:text-[15px] text-[#1A1A1A] leading-relaxed mb-4 sm:mb-0 w-full pr-4">
                     <div className="font-extrabold text-[16px] sm:text-[18px] mb-3 text-[#2C3E50] border-b pb-1">Room {data.room}</div>
                     
-                    {/* คนที่ 1 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
                       <div><span className="font-semibold text-gray-600">Name (T1):</span> <br/>{data.displayName}</div>
                       <div><span className="font-semibold text-gray-600">Nationality (T1):</span> <br/>{data.displayNationality}</div>
@@ -194,7 +193,6 @@ function DataPage() {
                       <div></div> 
                     </div>
 
-                    {/* 🎯 คนที่ 2 (จะแสดงผลและขยาย Card อัตโนมัติเมื่อมีข้อมูล) */}
                     {data.hasTenant2 && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
@@ -257,7 +255,6 @@ function DataPage() {
         </div>
       </div>
 
-      {/* 🟢 หน้าต่าง Edit (เพิ่มคนที่ 2) */}
       {editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg animate-fade-in-up max-h-[90vh] overflow-y-auto">
@@ -266,7 +263,6 @@ function DataPage() {
             </h2>
             <div className="flex flex-col gap-4">
               
-              {/* Tenant 1 */}
               <div className="bg-gray-50 p-4 rounded-lg border">
                 <h3 className="font-bold text-[#2C3E50] mb-3">Tenant 1</h3>
                 <div className="flex flex-col gap-3">
@@ -285,7 +281,6 @@ function DataPage() {
                 </div>
               </div>
 
-              {/* 🎯 Tenant 2 */}
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <h3 className="font-bold text-green-800 mb-3">Tenant 2 (Optional)</h3>
                 <div className="flex flex-col gap-3">
@@ -324,7 +319,6 @@ function DataPage() {
         </div>
       )}
 
-      {/* 🔵 หน้าต่าง History Log */}
       {viewingHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-3xl animate-fade-in-up max-h-[90vh] flex flex-col">

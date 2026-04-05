@@ -10,6 +10,8 @@ import PaymentInput from './PaymentInput';
 import PaymentReview from './PaymentReview';
 import PaymentChecking from './PaymentChecking';
 import PaymentSuccess from './PaymentSuccess';
+import AdminFeedback from './AdminFeedback';
+
 
 function App() {
   return (
@@ -33,8 +35,10 @@ function App() {
         <Route path="/admin/payment" element={<PaymentInput />} />
         <Route path="/admin/payment/review" element={<PaymentReview />} />
         <Route path="/admin/payment/checking" element={<PaymentChecking />} />
-        {/* 🎯 ลบหน้า PaymentEmail ออกไปแล้วครับ เหลือแค่ Success */}
         <Route path="/admin/payment/success" element={<PaymentSuccess />} />
+
+        {/* 🎯 หน้า Feedback (เช็คคอมเมนต์) */}
+        <Route path="/admin/feedback" element={<AdminFeedback />} />
       </Routes>
     </BrowserRouter>
   );

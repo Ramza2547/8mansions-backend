@@ -71,8 +71,9 @@ function GuestBooking() {
         <div className="flex justify-between items-stretch w-full min-h-[80px]">
           <div className="flex gap-6 sm:gap-10 items-center px-[5%]">
             <span onClick={() => navigate('/')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Home</span>
-            <span className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black underline underline-offset-4 decoration-2">Booking</span>
-            <span className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Comment</span>
+            <span onClick={() => navigate('/booking')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black underline underline-offset-4 decoration-2">Booking</span>
+            {/* 🎯 เติม onClick ตรงนี้ครับ */}
+            <span onClick={() => navigate('/comment')} className="cursor-pointer text-[16px] sm:text-[18px] font-medium text-black hover:underline underline-offset-4 decoration-2">Comment</span>
           </div>
           <div className="bg-black px-4 sm:px-[30px] flex items-center justify-center">
             <img src="/logo.png" alt="8 Mansions Logo" className="h-[50px] sm:h-[70px] w-auto block object-contain" />
@@ -153,7 +154,7 @@ function GuestBooking() {
                 <label className="block text-gray-700 font-semibold mb-2">Lease Duration (ระยะเวลาเช่า)</label>
                 <select name="duration" required value={duration} onChange={handleChange}
                   className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-[#92B0C3] bg-white">
-                  <option value="" disabled>Select Duration (เลือกระยะเวลา)</option>
+                  <option value="" disabled>Select Duration (เลือระยะเวลา)</option>
                   <option value="1">1 Month (1 เดือน)</option>
                   <option value="6">6 Months (6 เดือน)</option>
                   <option value="12">1 Year (1 ปี)</option>

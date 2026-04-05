@@ -15,7 +15,6 @@ function PaymentInput() {
     newElectric: '',
     oldWater: '',
     newWater: '',
-    // 🎯 State ใหม่สำหรับรายการ Other
     hasOther: false,
     otherDetail: '',
     otherAmount: ''
@@ -58,30 +57,26 @@ function PaymentInput() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🎯 ฟังก์ชันสลับสถานะ Checkbox Other
   const handleOtherCheck = (e) => {
     setFormData({ ...formData, hasOther: e.target.checked, otherDetail: '', otherAmount: '' });
   };
 
-  // 🎯 Logic เช็คเงื่อนไขว่าช่องไหนควรถูกปิด (Disabled) บ้าง
   const isDeposit = formData.hasOther && formData.otherDetail === 'Deposit';
   const isWithholding = formData.hasOther && formData.otherDetail === 'Withholding Deposit';
   const isOutstanding = formData.hasOther && formData.otherDetail === 'Outstanding Payment';
   
-  const disableRoomRental = isWithholding; // ถ้าเป็น Withholding ปิด Room Rental
-  const disableUtils = isWithholding || isDeposit; // ถ้าเป็น Withholding หรือ Deposit ปิดค่าน้ำค่าไฟ
+  const disableRoomRental = isWithholding; 
+  const disableUtils = isWithholding || isDeposit; 
 
   const handleNext = () => {
     if (!formData.room) return alert('กรุณาเลือกห้องพัก');
     if (!formData.dueDate) return alert('กรุณาระบุวันครบกำหนดชำระ (Due Date)');
 
-    // 🎯 เช็คความถูกต้องของ Other
     if (formData.hasOther) {
       if (!formData.otherDetail) return alert('กรุณาเลือกรายละเอียดในช่อง Other');
       if (!formData.otherAmount) return alert('กรุณากรอกจำนวนเงินในช่อง Other');
     }
 
-    // 🎯 เช็คความถูกต้องช่องปกติ (เฉพาะช่องที่ไม่ได้ถูก Disabled)
     if (!disableRoomRental && !formData.roomRental) return alert('กรุณากรอกค่าเช่าห้อง (Room Rental)');
     
     if (!disableUtils) {
@@ -106,10 +101,11 @@ function PaymentInput() {
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px]">
           <div className="flex items-center gap-6 pl-8 py-2 font-bold text-[#1A1A1A]">
-            <span className="cursor-pointer px-2" onClick={() => navigate('/admin')}>Home</span>
-            <span className="cursor-pointer px-2" onClick={() => navigate('/data')}>Data</span>
+            <span className="cursor-pointer px-2 hover:text-white" onClick={() => navigate('/admin')}>Home</span>
+            <span className="cursor-pointer px-2 hover:text-white" onClick={() => navigate('/data')}>Data</span>
             <span className="cursor-pointer px-2 underline">Payment</span>
-            <span className="cursor-pointer px-2">Feedback</span>
+            {/* 🎯 เพิ่ม onClick ให้ Feedback */}
+            <span className="cursor-pointer px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
             <span onClick={() => navigate('/')} className="mr-8 cursor-pointer font-bold hover:text-red-700">Log out</span>
@@ -144,7 +140,6 @@ function PaymentInput() {
               <input type="date" name="dueDate" value={formData.dueDate} onChange={handleChange} className="p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none" />
             </div>
 
-            {/* 🎯 ส่วนของ Other */}
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
               <label className="flex items-center gap-3 text-gray-800 font-bold cursor-pointer mb-4">
                 <input type="checkbox" checked={formData.hasOther} onChange={handleOtherCheck} className="w-5 h-5" />
@@ -170,7 +165,6 @@ function PaymentInput() {
               )}
             </div>
 
-            {/* 🎯 ช่องปกติ พร้อมระบบล็อค (Disabled) อัตโนมัติ */}
             <div className="grid grid-cols-2 items-center mt-2">
               <label className={`font-medium ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental</label>
               <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} className={`p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />

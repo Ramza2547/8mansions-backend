@@ -34,4 +34,12 @@ class Customer(models.Model):
     
     def __str__(self):
         return self.name
+    
+class Feedback(models.Model):
+    room = models.CharField(max_length=10)
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Room {self.room} - {self.created_at}"
 

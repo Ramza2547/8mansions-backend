@@ -149,7 +149,6 @@ function DataPage() {
             <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin')}>Home</span>
             <span className="cursor-pointer px-1 sm:px-2 underline">Data</span>
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/payment')}>Payment</span>
-            {/* 🎯 เพิ่ม onClick ให้ Feedback */}
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
@@ -164,6 +163,18 @@ function DataPage() {
       <div className="flex justify-center flex-1 py-8 sm:py-12 px-4 sm:px-10">
         <div className="w-full max-w-5xl">
           
+          {/* 🎯 ปุ่ม Revenue Data ย้ายมาอยู่ตรงกลาง ด้านบนของช่องค้นหา */}
+          <div className="flex justify-center mb-8">
+            <button 
+              onClick={() => navigate('/admin/revenue-data')} 
+              className="bg-[#2C3E50] hover:bg-black text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center gap-3 active:scale-95"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+              Revenue Data
+            </button>
+          </div>
+
+          {/* ช่องค้นหาข้อมูลลูกค้า */}
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
             <h2 className="text-xl font-bold text-[#2C3E50]">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
             <div className="relative w-full sm:w-auto">
@@ -252,9 +263,11 @@ function DataPage() {
               </div>
             )}
           </div>
+
         </div>
       </div>
 
+      {/* Popup Edit / History ปกติ... (ดึงจากโค้ดเดิม) */}
       {editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg animate-fade-in-up max-h-[90vh] overflow-y-auto">

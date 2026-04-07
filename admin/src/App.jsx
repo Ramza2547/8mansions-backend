@@ -11,6 +11,7 @@ import PaymentReview from './PaymentReview';
 import PaymentChecking from './PaymentChecking';
 import PaymentSuccess from './PaymentSuccess';
 import AdminFeedback from './AdminFeedback';
+import RevenueData from './RevenueData';
 
 
 function App() {
@@ -39,6 +40,9 @@ function App() {
 
         {/* 🎯 หน้า Feedback (เช็คคอมเมนต์) */}
         <Route path="/admin/feedback" element={<AdminFeedback />} />
+
+        <Route path="/admin/revenue-data" element={<RevenueData />} />
+
       </Routes>
     </BrowserRouter>
   );

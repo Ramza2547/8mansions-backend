@@ -5,6 +5,9 @@ from .serializers import CustomerSerializer
 from .models import Feedback
 from .serializers import FeedbackSerializer
 from rest_framework import viewsets
+from rest_framework import viewsets
+from .models import Invoice, UtilityCost
+from .serializers import InvoiceSerializer, UtilityCostSerializer
 
 # ==========================================
 # 1. ฟังก์ชันสำหรับระบบ Login (ฝังโค้ดสายลับไว้แล้ว)
@@ -83,3 +86,12 @@ def customer_update(request, pk):
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all().order_by('-created_at') # เรียงจากใหม่ไปเก่า
     serializer_class = FeedbackSerializer
+
+class InvoiceViewSet(viewsets.ModelViewSet):
+    queryset = Invoice.objects.all().order_by('-createdAt')
+    serializer_class = InvoiceSerializer
+
+class UtilityCostViewSet(viewsets.ModelViewSet):
+    queryset = UtilityCost.objects.all()
+    serializer_class = UtilityCostSerializer
+    lookup_field = 'billingMonth' # ค้นหา/อัปเดตข้อมูลด้วยชื่อเดือนได้เลย

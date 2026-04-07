@@ -1,4 +1,5 @@
 from django.db import models
+from django.db import models
 
 # 1. ตารางสำหรับทำระบบ Login
 class User(models.Model):
@@ -43,3 +44,28 @@ class Feedback(models.Model):
     def __str__(self):
         return f"Room {self.room} - {self.created_at}"
 
+# 🎯 1. ตารางเก็บข้อมูลบิลรายเดือน
+class Invoice(models.Model):
+    room = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+    dueDate = models.DateField()
+    billingMonth = models.CharField(max_length=50) # เช่น 'March 2026'
+    roomRental = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    elecBill = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    waterBill = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    remark = models.CharField(max_length=200, blank=True, null=True)
+    totalAmount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    isPaid = models.BooleanField(default=False) # สถานะการจ่ายเงิน
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Invoice {self.room} - {self.billingMonth}"
+
+# 🎯 2. ตารางเก็บต้นทุนค่าไฟการไฟฟ้า (PEA) และประปา (PWA) รายเดือน
+class UtilityCost(models.Model):
+    billingMonth = models.CharField(max_length=50, unique=True) # ห้ามซ้ำกันใน 1 เดือน
+    pea_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    pwa_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Utility Cost - {self.billingMonth}"

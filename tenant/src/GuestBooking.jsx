@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -6,6 +6,7 @@ function GuestBooking() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
+    room: '', // เพิ่มฟิลด์เก็บชื่อห้อง
     name: '', nationality: '', date_of_birth: '',
     lease_start: '', lease_end: '', 
     name_2: '', nationality_2: '', date_of_birth_2: '',
@@ -13,6 +14,38 @@ function GuestBooking() {
 
   const [duration, setDuration] = useState(''); 
   const [hasSecondTenant, setHasSecondTenant] = useState(false);
+  const [bookedRooms, setBookedRooms] = useState([]); // State เก็บรายชื่อห้องที่โดนจองแล้ว
+
+  // รายละเอียดห้องพักทั้งหมด
+  const roomDetails = [
+    { id: 'A1', description: 'Floor 1, Sunset view' },
+    { id: 'B1', description: 'Floor 1, Sunrise view' },
+    { id: 'C1', description: 'Floor 1, No sunlight' },
+    { id: 'D1', description: 'Floor 1, No sunlight' },
+    { id: 'A2', description: 'Floor 2, Sunset view' },
+    { id: 'B2', description: 'Floor 2, Sunrise view' },
+    { id: 'C2', description: 'Floor 2, No sunlight' },
+    { id: 'D2', description: 'Floor 2, No sunlight' },
+  ];
+
+  // ดึงข้อมูลลูกค้าเพื่อเช็คว่าห้องไหนถูกจองไปแล้วบ้าง
+  useEffect(() => {
+    const fetchBookedRooms = async () => {
+      try {
+        const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
+        if (Array.isArray(response.data)) {
+          // ดึงเฉพาะชื่อห้องที่ถูกจองแล้วมาเก็บไว้ใน Array (แปลงเป็นตัวพิมพ์ใหญ่เพื่อความชัวร์)
+          const booked = response.data.map(c => {
+            return String(c.room || c.room_number || c.room_name || c.roomRental || "").toUpperCase().trim();
+          }).filter(r => r !== "");
+          setBookedRooms(booked);
+        }
+      } catch (error) {
+        console.error('Error fetching booked rooms:', error);
+      }
+    };
+    fetchBookedRooms();
+  }, []);
 
   const calculateEndDate = (startDate, months) => {
     if (!startDate || !months) return '';
@@ -72,10 +105,31 @@ function GuestBooking() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center p-4 sm:p-6">
-        <div className="bg-white p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-lg my-6 sm:my-8">
+        <div className="bg-white p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-lg my-6 sm:my-8 animate-fade-in-up">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-[#1A1A1A]">Customer Registration</h2>
           
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            
+            {/* 🎯 ส่วนเลือกห้องพัก (เพิ่มใหม่) */}
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg flex flex-col gap-3 sm:gap-4">
+              <h3 className="font-bold text-orange-800 border-b border-orange-200 pb-2">Room Selection (เลือกห้องพัก)</h3>
+              <div>
+                <label className="block text-gray-700 font-bold mb-1 sm:mb-2 text-sm sm:text-base">Select Room</label>
+                <select name="room" required value={formData.room} onChange={handleChange}
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded focus:ring-2 focus:ring-orange-400 bg-white text-sm sm:text-base cursor-pointer">
+                  <option value="" disabled>-- Select a room --</option>
+                  {roomDetails.map((room) => {
+                    const isBooked = bookedRooms.includes(room.id);
+                    return (
+                      <option key={room.id} value={room.id} disabled={isBooked} className={isBooked ? "text-gray-400 bg-gray-100" : "text-black"}>
+                        Room {room.id} - {room.description} {isBooked ? '🚫 (Booked)' : '✅ (Available)'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+
             {/* ข้อมูลผู้เช่าคนที่ 1 */}
             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex flex-col gap-3 sm:gap-4">
               <h3 className="font-bold text-[#2C3E50] border-b pb-2">Tenant 1 (ผู้เช่าหลัก)</h3>

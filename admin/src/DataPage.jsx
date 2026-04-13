@@ -25,6 +25,8 @@ function DataPage() {
     try {
       const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
       if (Array.isArray(response.data)) {
+        // 💡 ใส่ log เอาไว้ให้ดูใน F12 ว่าฐานข้อมูลอ้วนส่งอะไรมาบ้าง
+        console.log("🔥 ข้อมูลจาก Database:", response.data); 
         setCustomers(response.data);
       } else {
         setCustomers([]);
@@ -113,8 +115,13 @@ function DataPage() {
     return date.toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
   };
 
-  const allRoomsData = roomNames.map((room, index) => {
-    const cust = customers[index];
+  const allRoomsData = roomNames.map((room) => {
+    // 🛠️ จุดที่แก้ไข: ดักจับชื่อฟิลด์หลายๆ แบบ และบังคับให้เป็นตัวพิมพ์ใหญ่ทั้งหมด (เช่น 'a1' จะกลายเป็น 'A1')
+    const cust = customers.find(c => {
+      const dbRoom = String(c.room || c.room_number || c.room_name || c.roomRental || c.roomNumber || c.RoomNumber || "").toUpperCase().trim();
+      return dbRoom === room.toUpperCase();
+    });
+
     return {
       room: room,
       cust: cust,
@@ -163,7 +170,6 @@ function DataPage() {
       <div className="flex justify-center flex-1 py-8 sm:py-12 px-4 sm:px-10">
         <div className="w-full max-w-5xl">
           
-          {/* 🎯 ปุ่ม Revenue Data ย้ายมาอยู่ตรงกลาง ด้านบนของช่องค้นหา */}
           <div className="flex justify-center mb-8">
             <button 
               onClick={() => navigate('/admin/revenue-data')} 
@@ -174,7 +180,6 @@ function DataPage() {
             </button>
           </div>
 
-          {/* ช่องค้นหาข้อมูลลูกค้า */}
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
             <h2 className="text-xl font-bold text-[#2C3E50]">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
             <div className="relative w-full sm:w-auto">
@@ -267,7 +272,6 @@ function DataPage() {
         </div>
       </div>
 
-      {/* Popup Edit / History ปกติ... (ดึงจากโค้ดเดิม) */}
       {editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg animate-fade-in-up max-h-[90vh] overflow-y-auto">

@@ -22,12 +22,25 @@ function PaymentInput() {
         const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
         if (Array.isArray(response.data)) {
           const occupied = [];
-          roomNames.forEach((room, index) => {
-            if (response.data[index]) occupied.push({ room: room, name: response.data[index].name });
+          
+          // 🛠️ จุดที่แก้ไข: ค้นหาลูกค้าที่จับคู่กับชื่อห้องเป๊ะๆ (ไม่ใช้ Index แล้ว)
+          roomNames.forEach((room) => {
+            const customerInRoom = response.data.find(c => {
+              const dbRoom = String(c.room || c.room_number || c.room_name || "").toUpperCase().trim();
+              return dbRoom === room.toUpperCase();
+            });
+
+            // ถ้าเจอว่ามีลูกค้าอยู่ห้องนี้จริงๆ ถึงจะเพิ่มเข้าไปใน Dropdown
+            if (customerInRoom) {
+              occupied.push({ room: room, name: customerInRoom.name });
+            }
           });
+          
           setOccupiedRooms(occupied);
         }
-      } catch (error) { console.error("ดึงข้อมูลไม่สำเร็จ", error); }
+      } catch (error) { 
+        console.error("ดึงข้อมูลไม่สำเร็จ", error); 
+      }
     };
     fetchCustomers();
   }, []);
@@ -108,13 +121,13 @@ function PaymentInput() {
               <label className="text-gray-700 font-medium text-sm sm:text-base">Choose Room</label>
               <select value={formData.room} onChange={handleRoomChange} className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1]">
                 <option value="" disabled>เลือกห้อง</option>
-                {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room}</option>)}
+                {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} - {r.name}</option>)}
               </select>
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className="text-gray-700 font-medium text-sm sm:text-base">Name</label>
-              <input type="text" value={formData.name} readOnly className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed" />
+              <input type="text" value={formData.name} readOnly className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed"  />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">

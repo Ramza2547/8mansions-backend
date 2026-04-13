@@ -122,7 +122,7 @@ function GuestBooking() {
                     const isBooked = bookedRooms.includes(room.id);
                     return (
                       <option key={room.id} value={room.id} disabled={isBooked} className={isBooked ? "text-gray-400 bg-gray-100" : "text-black"}>
-                        Room {room.id} - {room.description} {isBooked ? '🚫 (Booked)' : '✅ (Available)'}
+                        Room {room.id} - {room.description} {isBooked ? ' (Booked)' : ' (Available)'}
                       </option>
                     );
                   })}

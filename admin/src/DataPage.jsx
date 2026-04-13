@@ -79,26 +79,28 @@ function DataPage() {
       
       const detectedChanges = trackChanges(originalCustomer, editingCustomer);
       if (detectedChanges.length > 0) {
-        const newLog = {
-          timestamp: new Date().toISOString(),
-          changes: detectedChanges
-        };
-        const existingLogs = JSON.parse(localStorage.getItem(`history_log_${editingCustomer.id}`)) || [];
-        existingLogs.push(newLog);
-        localStorage.setItem(`history_log_${editingCustomer.id}`, JSON.stringify(existingLogs));
+        // 🎯 1. ส่งประวัติไปเก็บที่ฐานข้อมูล Backend
+        try {
+          await axios.post('https://eightmansions-backend.onrender.com/api/history/', {
+            customer: editingCustomer.id,
+            changes: detectedChanges
+          });
+        } catch (logError) {
+          console.error('ไม่สามารถบันทึกประวัติลงฐานข้อมูลได้:', logError);
+        }
       }
 
       setEditingCustomer(null); 
       setEditingRoom(''); 
       fetchCustomers(); 
 
-      // 🎯 เปลี่ยนจาก alert() เป็นการเปิด Custom Popup สีเขียว (สำเร็จ)
+      // 🎯 เปิด Custom Popup สีเขียว (สำเร็จ)
       setAlertMessage({ show: true, type: 'success', text: 'บันทึกการแก้ไขข้อมูลสำเร็จ!' });
       
     } catch (error) {
       console.error('Update error:', error.response);
       
-      // 🎯 เปลี่ยนจาก alert() เป็นการเปิด Custom Popup สีแดง (ผิดพลาด)
+      // 🎯 เปิด Custom Popup สีแดง (ผิดพลาด)
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -107,11 +109,19 @@ function DataPage() {
     }
   };
 
-  const handleHistoryClick = (customer, room) => {
+  // 🎯 2. เปลี่ยนฟังก์ชันกดปุ่มประวัติ ให้วิ่งไปดึงข้อมูลจาก API แทน
+  const handleHistoryClick = async (customer, room) => {
     setViewingHistory(customer);
     setHistoryRoom(room);
-    const logs = JSON.parse(localStorage.getItem(`history_log_${customer.id}`)) || [];
-    setRoomHistoryLogs(logs.reverse());
+    
+    try {
+      const response = await axios.get(`https://eightmansions-backend.onrender.com/api/history/?customer=${customer.id}`);
+      // ข้อมูลที่ Django ส่งมาถูกเรียงลำดับใหม่ไปเก่าแล้ว เลยใส่เข้าไปตรงๆ ได้เลย
+      setRoomHistoryLogs(response.data);
+    } catch (error) {
+      console.error("ดึงประวัติไม่สำเร็จ", error);
+      setRoomHistoryLogs([]);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -128,7 +138,6 @@ function DataPage() {
 
   const allRoomsData = roomNames.map((room) => {
     const cust = customers.find(c => {
-      // ป้องกันบั๊กถ้าข้อมูลลูกค้าบางแถวว่างหรือไม่มีอยู่จริง
       if (!c) return false;
       const dbRoom = String(c?.room || c?.room_number || "").toUpperCase().trim();
       return dbRoom === room.toUpperCase();
@@ -398,7 +407,7 @@ function DataPage() {
         </div>
       )}
 
-      {/* 🎯 Custom Alert Popup (แทนที่ window.alert เดิม) */}
+      {/* 🎯 Custom Alert Popup */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">

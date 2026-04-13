@@ -70,3 +70,14 @@ class UtilityCost(models.Model):
 
     def __str__(self):
         return f"Utility Cost - {self.billingMonth}"
+
+class HistoryLog(models.Model):
+    # เชื่อมกับลูกค้าคนนั้นๆ (ถ้าลูกค้าโดนลบ ประวัติก็จะโดนลบตามไปด้วย)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='history_logs')
+    # เก็บวันเวลาที่แก้ไขอัตโนมัติ
+    timestamp = models.DateTimeField(auto_now_add=True)
+    # เก็บข้อมูลที่เปลี่ยนไปในรูปแบบ JSON (เช่น เปลี่ยนชื่อจาก A เป็น B)
+    changes = models.JSONField(default=list)
+
+    def __str__(self):
+        return f"Log for {self.customer.name} at {self.timestamp}"

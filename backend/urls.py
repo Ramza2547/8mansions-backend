@@ -3,15 +3,16 @@ from django.urls import path, include  # 🎯 อย่าลืม import inclu
 from rest_framework.routers import DefaultRouter  # 🎯 import เครื่องมือ Router
 from api import views
 # 🎯 1. เพิ่ม InvoiceViewSet และ UtilityCostViewSet เข้ามาต่อท้าย
-from api.views import FeedbackViewSet, InvoiceViewSet, UtilityCostViewSet  
+from api.views import FeedbackViewSet, InvoiceViewSet, UtilityCostViewSet, HistoryLogViewSet
 
 # 🎯 2. นำเส้นทางใหม่มาลงทะเบียนกับ router ตัวเดิม
 router = DefaultRouter()
 router.register(r'feedbacks', FeedbackViewSet)
 router.register(r'invoices', InvoiceViewSet)          # 🎯 เพิ่มเส้นทางของบิล
 router.register(r'utility-costs', UtilityCostViewSet) # 🎯 เพิ่มเส้นทางของต้นทุนค่าน้ำค่าไฟ
+router.register(r'history', HistoryLogViewSet, basename='history') # 👈 🎯 ย้ายออกมาต่อท้ายเพื่อนๆ ตรงนี้ครับ!
 
-# 🎯 3. จัดการ urlpatterns
+# 🎯 3. จัดการ urlpatterns (ห้ามมี router.register อยู่ในนี้เด็ดขาด)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', views.login_api),

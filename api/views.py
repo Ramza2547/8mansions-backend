@@ -95,3 +95,18 @@ class UtilityCostViewSet(viewsets.ModelViewSet):
     queryset = UtilityCost.objects.all()
     serializer_class = UtilityCostSerializer
     lookup_field = 'billingMonth' # ค้นหา/อัปเดตข้อมูลด้วยชื่อเดือนได้เลย
+
+from .models import HistoryLog
+from .serializers import HistoryLogSerializer
+
+class HistoryLogViewSet(viewsets.ModelViewSet):
+    serializer_class = HistoryLogSerializer
+
+    def get_queryset(self):
+        # ดึงประวัติทั้งหมด เรียงจากใหม่ไปเก่า
+        queryset = HistoryLog.objects.all().order_by('-timestamp')
+        # ถ้า React ส่งรหัสลูกค้ามา (customer_id) ให้กรองเอาเฉพาะของคนนั้น
+        customer_id = self.request.query_params.get('customer', None)
+        if customer_id is not None:
+            queryset = queryset.filter(customer_id=customer_id)
+        return queryset

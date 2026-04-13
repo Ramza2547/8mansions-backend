@@ -23,3 +23,10 @@ class UtilityCostSerializer(serializers.ModelSerializer):
     class Meta:
         model = UtilityCost
         fields = '__all__'
+
+from .models import HistoryLog  # อย่าลืม import HistoryLog เข้ามาด้วยนะครับถ้ายังไม่มี
+
+class HistoryLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoryLog
+        fields = '__all__'

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
+import axios from 'axios'; 
 
 function THBText(amount) {
   if (isNaN(amount)) return "";
@@ -85,84 +86,169 @@ function RevenueData() {
   const [filterMonth, setFilterMonth] = useState('');
   const [utilityCosts, setUtilityCosts] = useState({});
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
+  
+  const [isUnsaved, setIsUnsaved] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false); 
+
   const pdfRef = useRef(null);
 
   const ROOM_ORDER = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
   const generateFilterOptions = () => {
-    const options = [];
+    const yearlyOptions = [];
+    const monthlyOptions = [];
     const startDate = new Date(2026, 0); 
-    const currentDate = new Date();
+    
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - 1);
+    
     const startYear = startDate.getFullYear();
-    const currentYear = currentDate.getFullYear();
+    const targetYear = targetDate.getFullYear();
 
-    for (let y = currentYear; y >= startYear; y--) {
-      options.push({ value: `${y}-ALL`, label: `--- ${y} (All Year) ---` });
-      const maxMonth = (y === currentYear) ? currentDate.getMonth() : 11;
+    for (let y = targetYear; y >= startYear; y--) {
+      yearlyOptions.push({ value: `${y}-ALL`, label: `${y}` });
+      
+      const maxMonth = (y === targetYear) ? targetDate.getMonth() : 11;
       for (let m = maxMonth; m >= 0; m--) {
         const tempDate = new Date(y, m);
         const monthLabel = tempDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        options.push({ value: monthLabel, label: monthLabel });
+        monthlyOptions.push({ value: monthLabel, label: monthLabel });
       }
     }
-    return options;
+    return { yearly: yearlyOptions, monthly: monthlyOptions };
   };
 
   const filterOptions = generateFilterOptions();
 
   useEffect(() => {
-    const savedInvoices = JSON.parse(localStorage.getItem('eightmansions_invoices')) || [];
-    setInvoices(savedInvoices);
+    const fetchData = async () => {
+      try {
+        const resInvoices = await axios.get('https://eightmansions-backend.onrender.com/api/invoices/');
+        setInvoices(resInvoices.data);
 
-    const savedUtilities = JSON.parse(localStorage.getItem('eightmansions_utility_costs')) || {};
-    setUtilityCosts(savedUtilities);
+        const resUtils = await axios.get('https://eightmansions-backend.onrender.com/api/utility-costs/');
+        const costObj = {};
+        resUtils.data.forEach(item => {
+          costObj[item.billingMonth] = { id: item.id, pea: Number(item.pea_cost), pwa: Number(item.pwa_cost) };
+        });
+        setUtilityCosts(costObj);
+      } catch (error) {
+        console.error("ดึงข้อมูลบัญชีล้มเหลว", error);
+      }
+    };
+    
+    fetchData();
 
-    const defaultMonth = filterOptions.find(opt => !opt.value.endsWith('-ALL'))?.value;
+    const defaultMonth = filterOptions.monthly.length > 0 ? filterOptions.monthly[0].value : '';
     if (defaultMonth) setFilterMonth(defaultMonth); 
   }, []);
 
+  // 🎯 เปลี่ยนให้ติ๊ก Paid แล้วแค่อัปเดตบนหน้าจอ (ยังไม่เซฟลง Database จนกว่าจะกดปุ่ม Save)
   const handleTogglePaid = (id) => {
-    const updatedInvoices = invoices.map(inv => {
-      if (inv.id === id) return { ...inv, isPaid: !inv.isPaid };
-      return inv;
-    });
-    setInvoices(updatedInvoices);
-    localStorage.setItem('eightmansions_invoices', JSON.stringify(updatedInvoices));
+    const targetInvoice = invoices.find(inv => inv.id === id);
+    if (!targetInvoice) return;
+
+    const newStatus = !targetInvoice.isPaid;
+    setInvoices(invoices.map(inv => inv.id === id ? { ...inv, isPaid: newStatus } : inv));
+    
+    setIsUnsaved(true);
+    setSaveSuccess(false);
   };
 
+  // 🎯 ติ๊กทีเดียวทั้งหมด ก็ยังไม่เซฟลง Database
   const handleToggleAllPaid = (e) => {
     const isChecked = e.target.checked;
     const currentMonthIds = invoices.filter(inv => inv.billingMonth === filterMonth).map(inv => inv.id);
-    const updatedInvoices = invoices.map(inv => {
-      if (currentMonthIds.includes(inv.id)) return { ...inv, isPaid: isChecked };
-      return inv;
-    });
-    setInvoices(updatedInvoices);
-    localStorage.setItem('eightmansions_invoices', JSON.stringify(updatedInvoices));
+    
+    setInvoices(invoices.map(inv => currentMonthIds.includes(inv.id) ? { ...inv, isPaid: isChecked } : inv));
+    
+    setIsUnsaved(true);
+    setSaveSuccess(false);
   };
 
   const handleUtilityChange = (type, value) => {
-    const updated = {
+    const numValue = Number(value) || 0;
+    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0 };
+    
+    setUtilityCosts({
       ...utilityCosts,
       [filterMonth]: {
-        ...utilityCosts[filterMonth],
-        [type]: Number(value) || 0
+        ...currentMonthData,
+        [type]: numValue
       }
-    };
-    setUtilityCosts(updated);
-    localStorage.setItem('eightmansions_utility_costs', JSON.stringify(updated));
+    });
+    
+    setIsUnsaved(true);
+    setSaveSuccess(false); 
+  };
+
+  // 🎯 ปุ่มนี้จะจัดการเซฟ "ทั้ง" ค่าน้ำไฟ "และ" สถานะการจ่ายเงิน (Paid) พร้อมกัน
+  const handleSaveData = async () => {
+    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0 };
+    try {
+      // 1. จัดการบันทึกค่าน้ำค่าไฟ (PEA / PWA)
+      const payload = {
+        billingMonth: filterMonth,
+        pea_cost: currentMonthData.pea,
+        pwa_cost: currentMonthData.pwa
+      };
+
+      const checkRes = await axios.get('https://eightmansions-backend.onrender.com/api/utility-costs/');
+      const existing = checkRes.data.find(item => item.billingMonth === filterMonth);
+
+      if (existing) {
+         try {
+           await axios.patch(`https://eightmansions-backend.onrender.com/api/utility-costs/${existing.id}/`, payload);
+         } catch (err) {
+           await axios.patch(`https://eightmansions-backend.onrender.com/api/utility-costs/${encodeURIComponent(filterMonth)}/`, payload);
+         }
+      } else {
+         const res = await axios.post('https://eightmansions-backend.onrender.com/api/utility-costs/', payload);
+         setUtilityCosts(prev => ({
+           ...prev,
+           [filterMonth]: { ...prev[filterMonth], id: res.data.id }
+         }));
+      }
+
+      // 2. จัดการบันทึกสถานะ Paid เฉพาะบิลของเดือนที่กำลังแสดงอยู่
+      if (!isYearlyView) {
+        const currentMonthInvoices = invoices.filter(inv => inv.billingMonth === filterMonth);
+        const patchPromises = currentMonthInvoices.map(inv => 
+          axios.patch(`https://eightmansions-backend.onrender.com/api/invoices/${inv.id}/`, { isPaid: inv.isPaid })
+        );
+        await Promise.all(patchPromises); // ยิงเซฟพร้อมกันทั้งหมด
+      }
+      
+      setIsUnsaved(false);
+      setSaveSuccess(true); 
+      setTimeout(() => setSaveSuccess(false), 3000);
+
+    } catch (error) {
+      console.error("บันทึกข้อมูลไม่สำเร็จ:", error);
+      alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`);
+    }
   };
 
   const confirmDelete = (id) => setDeleteModal({ isOpen: true, id });
 
-  const handleDelete = () => {
-    const updatedInvoices = invoices.filter(inv => inv.id !== deleteModal.id);
-    setInvoices(updatedInvoices);
-    localStorage.setItem('eightmansions_invoices', JSON.stringify(updatedInvoices));
+  const handleDelete = async () => {
+    const idToDelete = deleteModal.id;
+    setInvoices(invoices.filter(inv => inv.id !== idToDelete));
     setDeleteModal({ isOpen: false, id: null });
+
+    try {
+      await axios.delete(`https://eightmansions-backend.onrender.com/api/invoices/${idToDelete}/`);
+    } catch (error) {
+      console.error("ลบข้อมูลไม่สำเร็จ", error);
+    }
   };
 
   const handleSavePdf = () => {
+    if (isUnsaved) {
+      alert("กรุณากดปุ่ม Save Data เพื่อบันทึกข้อมูลก่อนพิมพ์เอกสารครับ!");
+      return;
+    }
+
     const element = pdfRef.current;
     const filename = `8Mansions_Report_${filterMonth.replace(/\s+/g, '_')}.pdf`;
     const opt = {
@@ -215,15 +301,19 @@ function RevenueData() {
   const totalCollected = allInvoicesForPeriod.filter(inv => inv.isPaid).reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const totalPending = grandTotalExpected - totalCollected;
 
-  const tableRental = displayInvoices.reduce((sum, inv) => sum + (Number(inv.roomRental) || 0), 0);
-  const tableElectric = displayInvoices.reduce((sum, inv) => sum + (Number(inv.elecBill) || 0), 0);
-  const tableWater = displayInvoices.reduce((sum, inv) => sum + (Number(inv.waterBill) || 0), 0);
-  const tableGrandTotal = displayInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+  // 🎯 ดึงเฉพาะบิลที่ติ๊ก Paid มาคำนวณสำหรับตารางหลักและ PDF
+  const paidDisplayInvoices = displayInvoices.filter(inv => inv.isPaid);
+
+  // 🎯 คำนวณ Total Summary ให้อิงตามบิลที่จ่ายแล้วเท่านั้น
+  const tableRental = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.roomRental) || 0), 0);
+  const tableElectric = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.elecBill) || 0), 0);
+  const tableWater = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.waterBill) || 0), 0);
+  const tableGrandTotal = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const tableOther = tableGrandTotal - tableRental - tableElectric - tableWater; 
 
   const isAllPaid = !isYearlyView && displayInvoices.length > 0 && displayInvoices.every(inv => inv.isPaid);
 
-  const pdfInvoices = displayInvoices.filter(inv => inv.isPaid); 
+  const pdfInvoices = paidDisplayInvoices; 
   const pdfTotalRental = pdfInvoices.reduce((sum, inv) => sum + (Number(inv.roomRental) || 0), 0);
   const pdfTotalElectric = pdfInvoices.reduce((sum, inv) => sum + (Number(inv.elecBill) || 0), 0);
   const pdfTotalWater = pdfInvoices.reduce((sum, inv) => sum + (Number(inv.waterBill) || 0), 0);
@@ -267,7 +357,7 @@ function RevenueData() {
       </nav>
 
       {/* ==============================================
-          🎯 แม่แบบ PDF ที่ซ่อนไว้ (แนวนอน) 
+          🎯 แม่แบบ PDF ที่ซ่อนไว้ 
           ============================================== */}
       <div className="absolute top-[-9999px] left-0 z-[-1]">
         <div ref={pdfRef} className="w-[1024px] bg-white p-10 text-black font-sans mx-auto">
@@ -283,7 +373,6 @@ function RevenueData() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="py-3 px-3 border border-black font-bold w-[10%]">Room</th>
-                {/* 🎯 ระบุ (THB) ให้หัวตาราง */}
                 <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Rental (THB)</th>
                 <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Electric (THB)</th>
                 <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Water (THB)</th>
@@ -298,11 +387,11 @@ function RevenueData() {
                 pdfInvoices.map((inv, idx) => (
                   <tr key={idx}>
                     <td className="py-2.5 px-3 border border-black font-extrabold text-[14px] whitespace-nowrap">{inv.room}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{inv.roomRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{inv.elecBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{inv.waterBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-2.5 px-3 border border-black text-right text-gray-700 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
-                    <td className="py-2.5 px-3 border border-black text-right font-extrabold text-[14px] whitespace-nowrap">{inv.totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 border border-black text-right font-extrabold text-[14px] whitespace-nowrap">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   </tr>
                 ))
               )}
@@ -325,7 +414,6 @@ function RevenueData() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="py-3 px-2 border border-black whitespace-nowrap">Period</th>
-                {/* 🎯 ระบุ (THB) ให้หัวตาราง */}
                 <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Rental (THB)</th>
                 <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Other (THB)</th>
                 <th className="py-3 px-2 border border-black text-right text-red-600 whitespace-nowrap">PEA (THB)</th>
@@ -350,7 +438,7 @@ function RevenueData() {
                 <td className="py-4 px-2 border border-black text-right text-green-700 text-[13px] whitespace-nowrap">{(pdfTotalWater - currentPwa).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 
                 <td className="py-4 px-2 border border-black text-right whitespace-nowrap">
-                  <span className="font-extrabold text-[15px] text-blue-700 border-b-4 border-double border-blue-700 pb-1.5 inline-block leading-none">
+                  <span className="font-extrabold text-[15px] text-blue-700 border-b-[4px] border-double border-blue-700 pb-2 inline-block leading-tight">
                     {finalPdfProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}
                   </span>
                 </td>
@@ -374,7 +462,6 @@ function RevenueData() {
           
         </div>
       </div>
-      {/* ============================================== */}
 
       {/* หน้าเว็บหลัก (Dashboard) */}
       <div className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full print:hidden">
@@ -388,14 +475,27 @@ function RevenueData() {
             <label className="font-bold text-gray-700 mr-2">Select Period:</label>
             <select 
               value={filterMonth} 
-              onChange={(e) => setFilterMonth(e.target.value)}
+              onChange={(e) => {
+                setFilterMonth(e.target.value);
+                setIsUnsaved(false); 
+                setSaveSuccess(false);
+              }}
               className="p-1 sm:p-2 border-none outline-none bg-transparent font-bold text-[#3498DB] cursor-pointer min-w-[150px] text-sm sm:text-base"
             >
-              {filterOptions.map(opt => (
-                <option key={opt.value} value={opt.value} className={opt.value.endsWith('-ALL') ? 'font-extrabold text-gray-900 bg-gray-100' : 'text-gray-700'}>
-                  {opt.label}
-                </option>
-              ))}
+              <optgroup label="Yearly">
+                {filterOptions.yearly.map(opt => (
+                  <option key={opt.value} value={opt.value} className="font-bold text-[#2C3E50]">
+                    {opt.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Monthly">
+                {filterOptions.monthly.map(opt => (
+                  <option key={opt.value} value={opt.value} className="text-gray-700">
+                    {opt.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
         </div>
@@ -421,7 +521,6 @@ function RevenueData() {
               <thead className="bg-[#8FAFC1] text-white">
                 <tr>
                   <th className="py-4 px-4 font-bold">Room</th>
-                  {/* 🎯 ระบุ (THB) ให้หัวตารางในหน้าเว็บ */}
                   <th className="py-4 px-4 font-bold text-right">Rental (THB)</th>
                   <th className="py-4 px-4 font-bold text-right">Electric (THB)</th>
                   <th className="py-4 px-4 font-bold text-right">Water (THB)</th>
@@ -449,11 +548,11 @@ function RevenueData() {
                   displayInvoices.map((inv, index) => (
                     <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
                       <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{inv.roomRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{inv.elecBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{inv.waterBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                       <td className="py-3 px-4 text-right text-gray-600 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
-                      <td className="py-3 px-4 text-right font-bold text-gray-900 whitespace-nowrap">{inv.totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right font-bold text-gray-900 whitespace-nowrap">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                       
                       {!isYearlyView && (
                         <td className="py-3 px-4 text-center border-l border-gray-100">
@@ -496,7 +595,9 @@ function RevenueData() {
                     <td className="py-4 px-4 text-right text-[#3498DB] whitespace-nowrap">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-4 px-4 text-right text-[#E74C3C] whitespace-nowrap">{tableOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-4 px-4 text-right text-[#2ECC71] text-lg whitespace-nowrap">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    {!isYearlyView && <td colSpan="2" className="py-4 px-4 text-center text-xs text-gray-400 whitespace-nowrap">Monthly Expected</td>}
+                    
+                    {/* 🎯 นำคำว่า Monthly Expected ออกตามคำขอ */}
+                    {!isYearlyView && <td colSpan="2" className="py-4 px-4"></td>}
                   </tr>
                 </tfoot>
               )}
@@ -511,31 +612,33 @@ function RevenueData() {
           </h2>
 
           {!isYearlyView && (
-            <div className="flex flex-col sm:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div className="flex-1">
-                <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider">PEA Cost (บิลค่าไฟการไฟฟ้า)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
-                  <input 
-                    type="number" 
-                    value={currentPea || ''} 
-                    onChange={(e) => handleUtilityChange('pea', e.target.value)}
-                    placeholder="ใส่ยอดบิลค่าไฟที่ต้องจ่ายจริง..."
-                    className="w-full pl-8 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#F1C40F] outline-none"
-                  />
+            <div className="flex flex-col gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider">PEA Cost (บิลค่าไฟการไฟฟ้า)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
+                    <input 
+                      type="number" 
+                      value={currentPea || ''} 
+                      onChange={(e) => handleUtilityChange('pea', e.target.value)}
+                      placeholder="ใส่ยอดบิลค่าไฟที่ต้องจ่ายจริง..."
+                      className="w-full pl-8 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#F1C40F] outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider">PWA Cost (บิลค่าน้ำประปา)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
-                  <input 
-                    type="number" 
-                    value={currentPwa || ''} 
-                    onChange={(e) => handleUtilityChange('pwa', e.target.value)}
-                    placeholder="ใส่ยอดบิลค่าน้ำที่ต้องจ่ายจริง..."
-                    className="w-full pl-8 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#3498DB] outline-none"
-                  />
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-700 mb-1 uppercase tracking-wider">PWA Cost (บิลค่าน้ำประปา)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
+                    <input 
+                      type="number" 
+                      value={currentPwa || ''} 
+                      onChange={(e) => handleUtilityChange('pwa', e.target.value)}
+                      placeholder="ใส่ยอดบิลค่าน้ำที่ต้องจ่ายจริง..."
+                      className="w-full pl-8 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#3498DB] outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -592,6 +695,30 @@ function RevenueData() {
             </table>
           </div>
 
+          {!isYearlyView && (
+            <div className="flex items-center gap-3 mt-4 px-4">
+              <button 
+                onClick={handleSaveData}
+                disabled={!isUnsaved}
+                className={`px-6 py-2.5 font-bold rounded shadow-md transition-all duration-300 flex items-center gap-2 ${
+                  isUnsaved 
+                    ? 'bg-[#3b5998] hover:bg-[#2d4373] text-white' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                Save Data (คลิกเพื่อบันทึก)
+              </button>
+
+              {saveSuccess && (
+                <div className="flex items-center gap-1 text-green-600 font-extrabold animate-pulse bg-green-100 px-3 py-1.5 rounded-full border border-green-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                  <span>บันทึกสำเร็จ!</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 flex flex-col items-end border-t border-gray-200 pt-4">
             <p className="font-black italic text-xl text-[#2C3E50] tracking-wide mb-1">" {THBText(finalWebProfit)} "</p>
             <p className="font-black italic text-lg text-gray-500 tracking-widest uppercase">" {ENGText(finalWebProfit)} "</p>
@@ -604,7 +731,12 @@ function RevenueData() {
             Back to Data Page
           </button>
           
-          <button onClick={handleSavePdf} className="bg-[#2ECC71] hover:bg-[#27AE60] text-white font-bold py-3 px-10 rounded shadow-md transition-transform active:scale-95 flex items-center justify-center gap-2">
+          <button 
+            onClick={handleSavePdf} 
+            disabled={isUnsaved}
+            title={isUnsaved ? "กรุณากด Save Data ก่อนพิมพ์เอกสาร" : "Save PDF / Print"}
+            className={`${isUnsaved ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-[#2ECC71] hover:bg-[#27AE60] active:scale-95'} text-white font-bold py-3 px-10 rounded shadow-md transition-all duration-300 flex items-center justify-center gap-2`}
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Save PDF / Print
           </button>

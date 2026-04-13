@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
+import axios from 'axios'; // 🎯 อย่าลืม import axios
 
 function PaymentChecking() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ function PaymentChecking() {
   const handleFinish = async () => {
     const element = invoiceRef.current;
     const fileNamePeriod = billingPeriod.replace(/\s+/g, '');
-    const filename = `${data.room}_${fileNamePeriod}.pdf`;
+    const filename = `8Mansions_${data.room}_${fileNamePeriod}.pdf`;
 
     const opt = {
       margin: 0,
@@ -56,10 +57,11 @@ function PaymentChecking() {
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
 
+    // โหลด PDF ลงเครื่อง
     html2pdf().set(opt).from(element).save();
 
+    // 🎯 เตรียมข้อมูลบิลสำหรับส่งเข้า Backend
     const newInvoiceRecord = {
-      id: Date.now(),
       room: data.room,
       name: data.name,
       dueDate: data.dueDate,
@@ -67,17 +69,19 @@ function PaymentChecking() {
       roomRental: roomRental,
       elecBill: elecBill,
       waterBill: waterBill,
-      remark: data.hasOther ? `${data.otherDetail} (${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})})` : '-',
+      remark: data.hasOther ? `${data.otherDetail} (${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})})` : '',
       totalAmount: totalAmount,
-      isPaid: false, 
-      createdAt: new Date().toISOString()
+      isPaid: false
     };
 
-    const existingInvoices = JSON.parse(localStorage.getItem('eightmansions_invoices')) || [];
-    existingInvoices.push(newInvoiceRecord);
-    localStorage.setItem('eightmansions_invoices', JSON.stringify(existingInvoices));
-
-    navigate('/admin/payment/success');
+    try {
+      // 🎯 ยิงข้อมูลไปเก็บที่ Database (Backend) แทน LocalStorage
+      await axios.post('https://eightmansions-backend.onrender.com/api/invoices/', newInvoiceRecord);
+      navigate('/admin/payment/success');
+    } catch (error) {
+      console.error("บันทึกบิลล้มเหลว:", error);
+      alert("เกิดข้อผิดพลาดในการเซฟบิลลงฐานข้อมูล! โปรดลองอีกครั้ง");
+    }
   };
 
   return (
@@ -147,7 +151,6 @@ function PaymentChecking() {
             <thead>
               <tr className="border-b border-gray-400">
                 <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 pr-1">Description</th>
-                {/* 🎯 เติมคำว่า (Unit) และ (THB) ให้หัวตารางชัดเจน */}
                 <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Old (Unit)</th>
                 <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">New (Unit)</th>
                 <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Total Units</th>

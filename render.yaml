@@ -1,0 +1,16 @@
+services:
+  # 🎯 1. คำสั่งสำหรับสร้างเว็บฝั่ง Admin
+  - type: web
+    name: 8mansions-admin
+    env: static
+    rootDir: admin # ชื่อโฟลเดอร์ฝั่ง Admin ของอ้วน (ถ้าชื่ออื่นให้แก้ตรงนี้นะครับ)
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist # โฟลเดอร์ที่ Vite จะสร้างขึ้นมาหลัง Build เสร็จ
+    
+  # 🎯 2. คำสั่งสำหรับสร้างเว็บฝั่ง Tenant (Guest)
+  - type: web
+    name: 8mansions-tenant
+    env: static
+    rootDir: tenant # ชื่อโฟลเดอร์ฝั่ง Tenant ของอ้วน
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist

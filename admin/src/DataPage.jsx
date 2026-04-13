@@ -15,6 +15,9 @@ function DataPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 🎯 เพิ่ม State สำหรับจัดการ Custom Alert Popup
+  const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '' });
+
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
   useEffect(() => {
@@ -85,13 +88,22 @@ function DataPage() {
         localStorage.setItem(`history_log_${editingCustomer.id}`, JSON.stringify(existingLogs));
       }
 
-      alert('บันทึกการแก้ไขข้อมูลสำเร็จ! ✅');
       setEditingCustomer(null); 
       setEditingRoom(''); 
       fetchCustomers(); 
+
+      // 🎯 เปลี่ยนจาก alert() เป็นการเปิด Custom Popup สีเขียว (สำเร็จ)
+      setAlertMessage({ show: true, type: 'success', text: 'บันทึกการแก้ไขข้อมูลสำเร็จ!' });
+      
     } catch (error) {
       console.error('Update error:', error.response);
-      alert('สาเหตุที่พัง: ' + JSON.stringify(error.response?.data || error.message));
+      
+      // 🎯 เปลี่ยนจาก alert() เป็นการเปิด Custom Popup สีแดง (ผิดพลาด)
+      setAlertMessage({ 
+        show: true, 
+        type: 'error', 
+        text: 'เกิดข้อผิดพลาด: ' + JSON.stringify(error.response?.data || error.message) 
+      });
     }
   };
 
@@ -114,11 +126,11 @@ function DataPage() {
     return date.toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
   };
 
-  // 🎯 จุดที่แก้ไข: เปลี่ยนจากการดึงข้อมูลตามลำดับ (Index) เป็นการค้นหาด้วย "ชื่อห้อง"
   const allRoomsData = roomNames.map((room) => {
     const cust = customers.find(c => {
-      // ดักจับชื่อฟิลด์ห้องจาก Database และแปลงเป็นตัวพิมพ์ใหญ่เพื่อเทียบให้ตรงเป๊ะ
-      const dbRoom = String(c.room || c.room_number || "").toUpperCase().trim();
+      // ป้องกันบั๊กถ้าข้อมูลลูกค้าบางแถวว่างหรือไม่มีอยู่จริง
+      if (!c) return false;
+      const dbRoom = String(c?.room || c?.room_number || "").toUpperCase().trim();
       return dbRoom === room.toUpperCase();
     });
 
@@ -170,7 +182,6 @@ function DataPage() {
       <div className="flex justify-center flex-1 py-8 sm:py-12 px-4 sm:px-10">
         <div className="w-full max-w-5xl">
           
-          {/* 🎯 ปุ่ม Revenue Data ย้ายมาอยู่ตรงกลาง ด้านบนของช่องค้นหา */}
           <div className="flex justify-center mb-8">
             <button 
               onClick={() => navigate('/admin/revenue-data')} 
@@ -181,7 +192,6 @@ function DataPage() {
             </button>
           </div>
 
-          {/* ช่องค้นหาข้อมูลลูกค้า */}
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
             <h2 className="text-xl font-bold text-[#2C3E50]">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
             <div className="relative w-full sm:w-auto">
@@ -387,6 +397,39 @@ function DataPage() {
           </div>
         </div>
       )}
+
+      {/* 🎯 Custom Alert Popup (แทนที่ window.alert เดิม) */}
+      {alertMessage.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
+            {alertMessage.type === 'success' ? (
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </div>
+            )}
+            
+            <h3 className={`text-xl font-extrabold mb-2 ${alertMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+              {alertMessage.type === 'success' ? 'Success!' : 'Error!'}
+            </h3>
+            
+            <p className="text-gray-600 mb-6 font-medium">{alertMessage.text}</p>
+            
+            <button
+              onClick={() => setAlertMessage({ show: false, type: '', text: '' })}
+              className={`px-8 py-3 font-bold text-white rounded-full transition-transform active:scale-95 w-full shadow-md ${
+                alertMessage.type === 'success' ? 'bg-[#27AE60] hover:bg-[#1E8449]' : 'bg-[#E74C3C] hover:bg-[#C0392B]'
+              }`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

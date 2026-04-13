@@ -12,6 +12,7 @@ class User(models.Model):
 
 # 2. ตารางสำหรับเก็บข้อมูลลูกค้า 
 class Customer(models.Model):
+    room = models.CharField(max_length=10, null=True, blank=True)
     name = models.CharField(max_length=200)        # เปลี่ยนเป็น Name รวม
     nationality = models.CharField(max_length=100) # เพิ่ม สัญชาติ
     date_of_birth = models.DateField()             # เพิ่ม วันเกิด (รูปแบบ YYYY-MM-DD)

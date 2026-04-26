@@ -15,7 +15,7 @@ function DataPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🎯 เพิ่ม State สำหรับจัดการ Custom Alert Popup
+  // 🎯 State สำหรับจัดการ Custom Alert Popup (มี success, error, และ warning)
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '' });
 
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
@@ -24,8 +24,10 @@ function DataPage() {
     fetchCustomers();
   }, []);
 
+  // 🎯 อัปเกรด: ระบบ Error Handling ดักจับ Cold Start (API Timeout)
   const fetchCustomers = async () => {
     try {
+      // สามารถใส่ timeout: 15000 (15 วิ) ใน axios ได้ แต่เพื่อความชัวร์เราดัก Catch ครอบคลุมไว้
       const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
       if (Array.isArray(response.data)) {
         console.log("🔥 ข้อมูลจาก Database:", response.data); 
@@ -35,7 +37,14 @@ function DataPage() {
       }
     } catch (error) {
       console.error("ดึงข้อมูลไม่สำเร็จ", error);
-      setCustomers([]);
+      setCustomers([]); // กันแอปแครชด้วยการเซ็ตเป็น Array ว่าง
+      
+      // 🚨 เด้ง Custom Alert แจ้งเตือนแอดมินว่าเซิร์ฟเวอร์กำลังตื่น!
+      setAlertMessage({ 
+        show: true, 
+        type: 'warning', 
+        text: 'เซิร์ฟเวอร์กำลังตื่นจากโหมดพัก (Cold Start) ⏳ กรุณารอสัก 1-2 นาที แล้วกดรีเฟรชหน้าเว็บอีกครั้งครับ' 
+      });
     }
   };
 
@@ -79,7 +88,6 @@ function DataPage() {
       
       const detectedChanges = trackChanges(originalCustomer, editingCustomer);
       if (detectedChanges.length > 0) {
-        // 🎯 1. ส่งประวัติไปเก็บที่ฐานข้อมูล Backend
         try {
           await axios.post('https://eightmansions-backend.onrender.com/api/history/', {
             customer: editingCustomer.id,
@@ -94,13 +102,10 @@ function DataPage() {
       setEditingRoom(''); 
       fetchCustomers(); 
 
-      // 🎯 เปิด Custom Popup สีเขียว (สำเร็จ)
       setAlertMessage({ show: true, type: 'success', text: 'บันทึกการแก้ไขข้อมูลสำเร็จ!' });
       
     } catch (error) {
       console.error('Update error:', error.response);
-      
-      // 🎯 เปิด Custom Popup สีแดง (ผิดพลาด)
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -109,14 +114,12 @@ function DataPage() {
     }
   };
 
-  // 🎯 2. เปลี่ยนฟังก์ชันกดปุ่มประวัติ ให้วิ่งไปดึงข้อมูลจาก API แทน
   const handleHistoryClick = async (customer, room) => {
     setViewingHistory(customer);
     setHistoryRoom(room);
     
     try {
       const response = await axios.get(`https://eightmansions-backend.onrender.com/api/history/?customer=${customer.id}`);
-      // ข้อมูลที่ Django ส่งมาถูกเรียงลำดับใหม่ไปเก่าแล้ว เลยใส่เข้าไปตรงๆ ได้เลย
       setRoomHistoryLogs(response.data);
     } catch (error) {
       console.error("ดึงประวัติไม่สำเร็จ", error);
@@ -407,31 +410,48 @@ function DataPage() {
         </div>
       )}
 
-      {/* 🎯 Custom Alert Popup */}
+      {/* 🎯 Custom Alert Popup (อัปเกรดเพิ่มแบบ Warning) */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
-            {alertMessage.type === 'success' ? (
+            
+            {/* ไอคอนตามประเภท */}
+            {alertMessage.type === 'success' && (
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
               </div>
-            ) : (
+            )}
+            {alertMessage.type === 'error' && (
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
               </div>
             )}
+            {/* 🎯 ไอคอนสีส้ม สำหรับ Warning / Cold Start */}
+            {alertMessage.type === 'warning' && (
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-sm">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+            )}
             
-            <h3 className={`text-xl font-extrabold mb-2 ${alertMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-              {alertMessage.type === 'success' ? 'Success!' : 'Error!'}
+            <h3 className={`text-xl font-extrabold mb-2 
+              ${alertMessage.type === 'success' ? 'text-green-700' : ''}
+              ${alertMessage.type === 'error' ? 'text-red-700' : ''}
+              ${alertMessage.type === 'warning' ? 'text-yellow-600' : ''}
+            `}>
+              {alertMessage.type === 'success' && 'Success!'}
+              {alertMessage.type === 'error' && 'Error!'}
+              {alertMessage.type === 'warning' && 'Please Wait'}
             </h3>
             
             <p className="text-gray-600 mb-6 font-medium">{alertMessage.text}</p>
             
             <button
               onClick={() => setAlertMessage({ show: false, type: '', text: '' })}
-              className={`px-8 py-3 font-bold text-white rounded-full transition-transform active:scale-95 w-full shadow-md ${
-                alertMessage.type === 'success' ? 'bg-[#27AE60] hover:bg-[#1E8449]' : 'bg-[#E74C3C] hover:bg-[#C0392B]'
-              }`}
+              className={`px-8 py-3 font-bold text-white rounded-full transition-transform active:scale-95 w-full shadow-md 
+                ${alertMessage.type === 'success' ? 'bg-[#27AE60] hover:bg-[#1E8449]' : ''}
+                ${alertMessage.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : ''}
+                ${alertMessage.type === 'warning' ? 'bg-[#F39C12] hover:bg-[#D68910]' : ''}
+              `}
             >
               OK
             </button>

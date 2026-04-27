@@ -143,7 +143,6 @@ function RevenueData() {
     if (defaultMonth) setFilterMonth(defaultMonth); 
   }, []);
 
-  // 🎯 เปลี่ยนให้ติ๊ก Paid แล้วแค่อัปเดตบนหน้าจอ (ยังไม่เซฟลง Database จนกว่าจะกดปุ่ม Save)
   const handleTogglePaid = (id) => {
     const targetInvoice = invoices.find(inv => inv.id === id);
     if (!targetInvoice) return;
@@ -155,7 +154,6 @@ function RevenueData() {
     setSaveSuccess(false);
   };
 
-  // 🎯 ติ๊กทีเดียวทั้งหมด ก็ยังไม่เซฟลง Database
   const handleToggleAllPaid = (e) => {
     const isChecked = e.target.checked;
     const currentMonthIds = invoices.filter(inv => inv.billingMonth === filterMonth).map(inv => inv.id);
@@ -182,11 +180,9 @@ function RevenueData() {
     setSaveSuccess(false); 
   };
 
-  // 🎯 ปุ่มนี้จะจัดการเซฟ "ทั้ง" ค่าน้ำไฟ "และ" สถานะการจ่ายเงิน (Paid) พร้อมกัน
   const handleSaveData = async () => {
     const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0 };
     try {
-      // 1. จัดการบันทึกค่าน้ำค่าไฟ (PEA / PWA)
       const payload = {
         billingMonth: filterMonth,
         pea_cost: currentMonthData.pea,
@@ -210,13 +206,12 @@ function RevenueData() {
          }));
       }
 
-      // 2. จัดการบันทึกสถานะ Paid เฉพาะบิลของเดือนที่กำลังแสดงอยู่
       if (!isYearlyView) {
         const currentMonthInvoices = invoices.filter(inv => inv.billingMonth === filterMonth);
         const patchPromises = currentMonthInvoices.map(inv => 
           axios.patch(`https://eightmansions-backend.onrender.com/api/invoices/${inv.id}/`, { isPaid: inv.isPaid })
         );
-        await Promise.all(patchPromises); // ยิงเซฟพร้อมกันทั้งหมด
+        await Promise.all(patchPromises); 
       }
       
       setIsUnsaved(false);
@@ -256,7 +251,8 @@ function RevenueData() {
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, scrollX: 0, scrollY: 0 }, 
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      // 🎯 เปลี่ยนจาก landscape เป็น portrait เพื่อให้เป็นแนวตั้ง
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
     };
     html2pdf().set(opt).from(element).save();
   };
@@ -301,10 +297,8 @@ function RevenueData() {
   const totalCollected = allInvoicesForPeriod.filter(inv => inv.isPaid).reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const totalPending = grandTotalExpected - totalCollected;
 
-  // 🎯 ดึงเฉพาะบิลที่ติ๊ก Paid มาคำนวณสำหรับตารางหลักและ PDF
   const paidDisplayInvoices = displayInvoices.filter(inv => inv.isPaid);
 
-  // 🎯 คำนวณ Total Summary ให้อิงตามบิลที่จ่ายแล้วเท่านั้น
   const tableRental = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.roomRental) || 0), 0);
   const tableElectric = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.elecBill) || 0), 0);
   const tableWater = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.waterBill) || 0), 0);
@@ -357,41 +351,43 @@ function RevenueData() {
       </nav>
 
       {/* ==============================================
-          🎯 แม่แบบ PDF ที่ซ่อนไว้ 
+          🎯 แม่แบบ PDF (ปรับเป็นแนวตั้ง ทรงแคบลง ย่ออักษร และปรับตาราง Profit)
           ============================================== */}
       <div className="absolute top-[-9999px] left-0 z-[-1]">
-        <div ref={pdfRef} className="w-[1024px] bg-white p-10 text-black font-sans mx-auto">
+        {/* ปรับความกว้างให้แคบลง (700px) เพื่อให้เหมาะกับ A4 แนวตั้ง */}
+        <div ref={pdfRef} className="w-[700px] bg-white p-8 text-black font-sans mx-auto">
           
-          <div className="flex justify-between items-end border-b-[3px] border-black pb-3 mb-8">
-            <h1 className="text-4xl font-extrabold tracking-widest text-[#1A1A1A]">8 MANSIONS</h1>
-            <h2 className="text-2xl font-bold text-gray-800">
+          <div className="flex justify-between items-end border-b-[2px] border-black pb-2 mb-6">
+            <h1 className="text-3xl font-extrabold tracking-widest text-[#1A1A1A]">8 MANSIONS</h1>
+            <h2 className="text-xl font-bold text-gray-800">
               {isYearlyView ? yearStr : filterMonth}
             </h2>
           </div>
 
-          <table className="w-full text-center border-collapse mb-10 text-[13px] border border-black">
+          {/* 🎯 ย่อ Padding (py-1.5, px-2) และขนาดอักษร (text-[11px]) เพื่อประหยัดพื้นที่ */}
+          <table className="w-full text-center border-collapse mb-6 text-[11px] border border-black">
             <thead>
               <tr className="bg-gray-100">
-                <th className="py-3 px-3 border border-black font-bold w-[10%]">Room</th>
-                <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Rental (THB)</th>
-                <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Electric (THB)</th>
-                <th className="py-3 px-3 border border-black font-bold w-[16%] whitespace-nowrap">Water (THB)</th>
-                <th className="py-3 px-3 border border-black font-bold w-[22%] whitespace-nowrap">Other (THB)</th>
-                <th className="py-3 px-3 border border-black font-bold w-[20%] whitespace-nowrap">Total (THB)</th>
+                <th className="py-2 px-2 border border-black font-bold w-[10%]">Room</th>
+                <th className="py-2 px-2 border border-black font-bold w-[18%]">Rental (THB)</th>
+                <th className="py-2 px-2 border border-black font-bold w-[18%]">Electric (THB)</th>
+                <th className="py-2 px-2 border border-black font-bold w-[18%]">Water (THB)</th>
+                <th className="py-2 px-2 border border-black font-bold w-[18%]">Other (THB)</th>
+                <th className="py-2 px-2 border border-black font-bold w-[18%]">Total (THB)</th>
               </tr>
             </thead>
             <tbody>
               {pdfInvoices.length === 0 ? (
-                <tr><td colSpan="6" className="py-8 text-gray-500 italic border border-black text-base">No paid invoices available.</td></tr>
+                <tr><td colSpan="6" className="py-6 text-gray-500 italic border border-black text-sm">No paid invoices available.</td></tr>
               ) : (
                 pdfInvoices.map((inv, idx) => (
                   <tr key={idx}>
-                    <td className="py-2.5 px-3 border border-black font-extrabold text-[14px] whitespace-nowrap">{inv.room}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 border border-black text-right whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-3 border border-black text-right text-gray-700 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
-                    <td className="py-2.5 px-3 border border-black text-right font-extrabold text-[14px] whitespace-nowrap">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-1.5 px-2 border border-black font-extrabold text-[12px]">{inv.room}</td>
+                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-1.5 px-2 border border-black text-right text-gray-700">{getOtherDisplay(inv, isYearlyView)}</td>
+                    <td className="py-1.5 px-2 border border-black text-right font-extrabold text-[12px]">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   </tr>
                 ))
               )}
@@ -399,65 +395,68 @@ function RevenueData() {
             {pdfInvoices.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-[2px] border-black">
-                  <td className="py-4 px-3 border border-black text-[14px] whitespace-nowrap">Total</td>
-                  <td className="py-4 px-3 border border-black text-right whitespace-nowrap">{pdfTotalRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-4 px-3 border border-black text-right whitespace-nowrap">{pdfTotalElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-4 px-3 border border-black text-right whitespace-nowrap">{pdfTotalWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-4 px-3 border border-black text-right whitespace-nowrap">{pdfTotalOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-4 px-3 border border-black text-right text-[15px] whitespace-nowrap">{pdfGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2 px-2 border border-black text-[12px]">Total</td>
+                  <td className="py-2 px-2 border border-black text-right">{pdfTotalRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2 px-2 border border-black text-right">{pdfTotalElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2 px-2 border border-black text-right">{pdfTotalWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2 px-2 border border-black text-right">{pdfTotalOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2 px-2 border border-black text-right text-[13px]">{pdfGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
               </tfoot>
             )}
           </table>
 
-          <table className="w-full text-center border-collapse mb-4 text-[12px] border border-black">
+          {/* 🎯 ปรับตาราง Profit ให้รวบรัดลง ไม่ให้กางยาวจนล้นจอแนวตั้ง */}
+          <div className="font-extrabold text-[13px] mb-2">Profit Analysis</div>
+          <table className="w-full text-center border-collapse mb-4 text-[11px] border border-black">
             <thead>
               <tr className="bg-gray-100">
-                <th className="py-3 px-2 border border-black whitespace-nowrap">Period</th>
-                <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Rental (THB)</th>
-                <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Other (THB)</th>
-                <th className="py-3 px-2 border border-black text-right text-red-600 whitespace-nowrap">PEA (THB)</th>
-                <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Total Elec (THB)</th>
-                <th className="py-3 px-2 border border-black text-right text-green-700 whitespace-nowrap">Elec Profit (THB)</th>
-                <th className="py-3 px-2 border border-black text-right text-red-600 whitespace-nowrap">PWA (THB)</th>
-                <th className="py-3 px-2 border border-black text-right whitespace-nowrap">Total Water (THB)</th>
-                <th className="py-3 px-2 border border-black text-right text-green-700 whitespace-nowrap">Water Profit (THB)</th>
-                <th className="py-3 px-2 border border-black text-right text-blue-700 whitespace-nowrap">Grand Total (THB)</th>
+                <th className="py-2 px-2 border border-black">Category</th>
+                <th className="py-2 px-2 border border-black text-right">Collected (THB)</th>
+                <th className="py-2 px-2 border border-black text-right text-red-600">Actual Cost (THB)</th>
+                <th className="py-2 px-2 border border-black text-right text-green-700">Profit (THB)</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="font-bold">
-                <td className="py-4 px-2 border border-black text-[13px] whitespace-nowrap">{isYearlyView ? yearStr : filterMonth.substring(0,3)+"-"+yearStr.slice(-2)}</td>
-                <td className="py-4 px-2 border border-black text-right text-[13px] whitespace-nowrap">{pdfTotalRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-[13px] whitespace-nowrap">{pdfTotalOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-red-600 text-[13px] whitespace-nowrap">{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-[13px] whitespace-nowrap">{pdfTotalElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-green-700 text-[13px] whitespace-nowrap">{(pdfTotalElectric - currentPea).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-red-600 text-[13px] whitespace-nowrap">{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-[13px] whitespace-nowrap">{pdfTotalWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td className="py-4 px-2 border border-black text-right text-green-700 text-[13px] whitespace-nowrap">{(pdfTotalWater - currentPwa).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                
-                <td className="py-4 px-2 border border-black text-right whitespace-nowrap">
-                  <span className="font-extrabold text-[15px] text-blue-700 border-b-[4px] border-double border-blue-700 pb-2 inline-block leading-tight">
-                    {finalPdfProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}
-                  </span>
+              <tr>
+                <td className="py-1.5 px-2 border border-black text-left font-bold">Electricity</td>
+                <td className="py-1.5 px-2 border border-black text-right">{pdfTotalElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-1.5 px-2 border border-black text-right text-red-600">{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-1.5 px-2 border border-black text-right font-bold text-green-700">{(pdfTotalElectric - currentPea).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              </tr>
+              <tr>
+                <td className="py-1.5 px-2 border border-black text-left font-bold">Water</td>
+                <td className="py-1.5 px-2 border border-black text-right">{pdfTotalWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-1.5 px-2 border border-black text-right text-red-600">{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-1.5 px-2 border border-black text-right font-bold text-green-700">{(pdfTotalWater - currentPwa).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              </tr>
+              <tr>
+                <td className="py-1.5 px-2 border border-black text-left font-bold">Room Rental & Other</td>
+                <td className="py-1.5 px-2 border border-black text-right">{(pdfTotalRental + pdfTotalOther).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-1.5 px-2 border border-black text-right text-red-600">0.00</td>
+                <td className="py-1.5 px-2 border border-black text-right font-bold text-green-700">{(pdfTotalRental + pdfTotalOther).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              </tr>
+              <tr className="bg-gray-100 font-bold border-t-[2px] border-black">
+                <td colSpan="3" className="py-2 px-2 border border-black text-right text-[12px] text-blue-700">Grand Total Profit</td>
+                <td className="py-2 px-2 border border-black text-right text-[13px] text-blue-700">
+                  {finalPdfProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}
                 </td>
               </tr>
             </tbody>
           </table>
 
-          <div className="flex flex-col items-end mb-8 mt-2 text-[#2C3E50]">
-            <p className="font-black italic text-[16px] tracking-wide mb-1">" {THBText(finalPdfProfit)} "</p>
-            <p className="font-black italic text-[14px] text-gray-700 tracking-widest uppercase">" {ENGText(finalPdfProfit)} "</p>
+          <div className="flex flex-col items-end mb-6 mt-2 text-[#2C3E50]">
+            <p className="font-black italic text-[14px] tracking-wide mb-1">" {THBText(finalPdfProfit)} "</p>
+            <p className="font-black italic text-[12px] text-gray-700 tracking-widest uppercase">" {ENGText(finalPdfProfit)} "</p>
           </div>
 
-          <div className="mt-4 text-[#1A1A1A]">
-            <div className="font-extrabold text-[14px] mb-2">Remark</div>
-            <div className="text-[12px] mb-1">1. Electric bill is 5 baht per 1 unit</div>
-            <div className="text-[12px] mb-1">2. Water bill is 7 baht per 1 unit</div>
-            <div className="text-[12px] mb-1">3. (Wds) is Withholding deposit การยึดเงินประกัน</div>
-            <div className="text-[12px] mb-1">4. (Ds) is Deposit ค่ามัดจำ</div>
-            <div className="text-[12px]">5. (Op) is Outstanding Payment ค้างชำระ</div>
+          <div className="mt-4 text-[#1A1A1A] border-t border-gray-300 pt-4">
+            <div className="font-extrabold text-[12px] mb-1">Remark</div>
+            <div className="text-[10px] mb-1">1. Electric bill is 5 baht per 1 unit</div>
+            <div className="text-[10px] mb-1">2. Water bill is 7 baht per 1 unit</div>
+            <div className="text-[10px] mb-1">3. (Wds) = Withholding deposit (การยึดเงินประกัน)</div>
+            <div className="text-[10px] mb-1">4. (Ds) = Deposit (ค่ามัดจำ)</div>
+            <div className="text-[10px]">5. (Op) = Outstanding Payment (ค้างชำระ)</div>
           </div>
           
         </div>
@@ -596,7 +595,6 @@ function RevenueData() {
                     <td className="py-4 px-4 text-right text-[#E74C3C] whitespace-nowrap">{tableOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-4 px-4 text-right text-[#2ECC71] text-lg whitespace-nowrap">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     
-                    {/* 🎯 นำคำว่า Monthly Expected ออกตามคำขอ */}
                     {!isYearlyView && <td colSpan="2" className="py-4 px-4"></td>}
                   </tr>
                 </tfoot>

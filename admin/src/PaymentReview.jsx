@@ -10,7 +10,8 @@ function PaymentReview() {
 
   const [formData, setFormData] = useState({
     room: initialData.room || '', name: initialData.name || '', dueDate: initialData.dueDate || '',
-    roomRental: initialData.roomRental || '', oldElectric: initialData.oldElectric || '', newElectric: initialData.newElectric || '',
+    roomRentalRemark: initialData.roomRentalRemark || '', roomRental: initialData.roomRental || '', // 🎯 รับค่า Remark
+    oldElectric: initialData.oldElectric || '', newElectric: initialData.newElectric || '',
     oldWater: initialData.oldWater || '', newWater: initialData.newWater || '',
     hasOther: initialData.hasOther || false, otherDetail: initialData.otherDetail || '', otherAmount: initialData.otherAmount || ''
   });
@@ -26,7 +27,6 @@ function PaymentReview() {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   
-  // 🎯 ฟังก์ชันกันพัง 1
   const handleDateChange = (date) => {
     if (!date || isNaN(date.getTime())) {
       setFormData({ ...formData, dueDate: '' });
@@ -36,7 +36,6 @@ function PaymentReview() {
     setFormData({ ...formData, dueDate: dateStr });
   };
 
-  // 🎯 ฟังก์ชันกันพัง 2
   const getValidDate = (dateStr) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
@@ -45,6 +44,8 @@ function PaymentReview() {
 
   const isDeposit = formData.hasOther && formData.otherDetail === 'Deposit';
   const isWithholding = formData.hasOther && formData.otherDetail === 'Withholding Deposit';
+  const isRefund = formData.hasOther && formData.otherDetail === 'Refund'; // 🎯 ตรวจสอบ Refund
+
   const disableRoomRental = isWithholding;
   const disableUtils = isWithholding || isDeposit;
 
@@ -54,7 +55,13 @@ function PaymentReview() {
   
   const elecBill = elecUnit * 5; 
   const waterBill = waterUnit * 7; 
-  const otherAmt = formData.hasOther ? (Number(formData.otherAmount) || 0) : 0;
+  
+  // 🎯 ถ้ารายการเป็น Refund จะเปลี่ยนยอด Other ให้กลายเป็นยอดติดลบทันที
+  let otherAmt = formData.hasOther ? (Number(formData.otherAmount) || 0) : 0;
+  if (isRefund) {
+    otherAmt = -Math.abs(otherAmt); // บังคับแปลงเป็นลบ ไม่ว่าแอดมินจะกรอกมาเป็นบวกหรือลบ
+  }
+
   const totalAmount = roomRental + elecBill + waterBill + otherAmt;
 
   return (
@@ -108,21 +115,31 @@ function PaymentReview() {
             </div>
 
             {formData.hasOther && (
-              <div className="p-3 sm:p-4 bg-yellow-50 border border-yellow-300 rounded-lg mt-2 mb-2 flex flex-col gap-3">
+              <div className={`p-3 sm:p-4 border rounded-lg mt-2 mb-2 flex flex-col gap-3 ${isRefund ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-300'}`}>
                 <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0">
-                  <label className="text-gray-800 font-bold">Other Detail</label>
-                  <div className="w-full p-2 bg-yellow-100 border border-yellow-300 rounded font-bold cursor-not-allowed">{formData.otherDetail}</div>
+                  <label className={`font-bold ${isRefund ? 'text-red-800' : 'text-gray-800'}`}>Other Detail</label>
+                  <div className={`w-full p-2 border rounded font-bold cursor-not-allowed ${isRefund ? 'bg-red-100 border-red-300' : 'bg-yellow-100 border-yellow-300'}`}>{formData.otherDetail}</div>
                 </div>
                 <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0">
-                  <label className="text-gray-800 font-bold">Amount (THB)</label>
-                  <input type="number" name="otherAmount" value={formData.otherAmount} onChange={handleChange} className="w-full p-2 bg-white border border-yellow-400 rounded outline-none font-bold focus:ring-2 focus:ring-yellow-200" />
+                  <label className={`font-bold ${isRefund ? 'text-red-800' : 'text-gray-800'}`}>Amount (THB)</label>
+                  {/* 🎯 แสดงยอดติดลบถ้าเป็น Refund เพื่อความชัดเจน */}
+                  <div className="relative w-full">
+                    {isRefund && <span className="absolute left-3 top-2 font-bold text-red-600">-</span>}
+                    <input type="number" name="otherAmount" value={formData.otherAmount} onChange={handleChange} className={`w-full p-2 bg-white border rounded outline-none font-bold ${isRefund ? 'border-red-400 focus:ring-2 focus:ring-red-200 pl-6 text-red-600' : 'border-yellow-400 focus:ring-2 focus:ring-yellow-200'}`} />
+                  </div>
                 </div>
               </div>
             )}
 
             <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-2">
               <label className={`font-bold sm:font-normal ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
-              <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} className={`w-full p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              {/* 🎯 ช่อง Room Rental แตกเป็นสองส่วนในหน้า Review */}
+              <div className="flex gap-2 w-full">
+                <div className={`w-1/2 p-2 border rounded text-sm overflow-hidden whitespace-nowrap text-ellipsis ${disableRoomRental ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
+                  {formData.roomRentalRemark || '-'}
+                </div>
+                <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} className={`w-1/2 p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-2">
@@ -163,7 +180,10 @@ function PaymentReview() {
 
             <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-4">
               <label className="text-gray-900 font-extrabold text-lg">Total</label>
-              <div className="w-full p-2 bg-gray-300 border-b border-gray-400 font-extrabold text-xl sm:text-2xl text-green-700">{totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+              {/* 🎯 ถ้ายอดรวมติดลบ จะแสดงเป็นสีแดงให้ชัดเจน */}
+              <div className={`w-full p-2 border-b font-extrabold text-xl sm:text-2xl ${totalAmount < 0 ? 'bg-red-200 border-red-400 text-red-700' : 'bg-gray-300 border-gray-400 text-green-700'}`}>
+                {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
+              </div>
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row justify-between mt-6 sm:mt-8 gap-3 sm:gap-0">

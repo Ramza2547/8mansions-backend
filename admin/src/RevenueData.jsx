@@ -251,7 +251,6 @@ function RevenueData() {
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, scrollX: 0, scrollY: 0 }, 
-      // 🎯 เปลี่ยนจาก landscape เป็น portrait เพื่อให้เป็นแนวตั้ง
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
     };
     html2pdf().set(opt).from(element).save();
@@ -269,7 +268,7 @@ function RevenueData() {
     const grouped = {};
     yearlyPaidInvoices.forEach(inv => {
       if (!grouped[inv.room]) {
-        grouped[inv.room] = { id: inv.room, room: inv.room, roomRental: 0, elecBill: 0, waterBill: 0, totalAmount: 0, remark: '-', isPaid: true };
+        grouped[inv.room] = { id: inv.room, room: inv.room, roomRentalRemark: '', roomRental: 0, elecBill: 0, waterBill: 0, totalAmount: 0, remark: '-', isPaid: true };
       }
       grouped[inv.room].roomRental += Number(inv.roomRental) || 0;
       grouped[inv.room].elecBill += Number(inv.elecBill) || 0;
@@ -314,6 +313,7 @@ function RevenueData() {
   const pdfGrandTotal = pdfInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const pdfTotalOther = pdfGrandTotal - pdfTotalRental - pdfTotalElectric - pdfTotalWater;
 
+  // 🎯 อัปเดต: เพิ่มเช็ค (Refund)
   const getOtherDisplay = (inv, isYearly) => {
     const otherAmt = (Number(inv.totalAmount) - Number(inv.roomRental) - Number(inv.elecBill) - Number(inv.waterBill)) || 0;
     if (Math.abs(otherAmt) < 0.01) return '0.00';
@@ -324,6 +324,7 @@ function RevenueData() {
     if (lower.includes('withholding')) prefix = '(Wds) ';
     else if (lower.includes('deposit')) prefix = '(Ds) ';
     else if (lower.includes('outstanding')) prefix = '(Op) ';
+    else if (lower.includes('refund')) prefix = '(Rf) '; // 🎯 เพิ่ม Refund เข้าไป
     return `${prefix}${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
   };
 
@@ -351,10 +352,9 @@ function RevenueData() {
       </nav>
 
       {/* ==============================================
-          🎯 แม่แบบ PDF (ปรับเป็นแนวตั้ง ทรงแคบลง ย่ออักษร และปรับตาราง Profit)
+          🎯 แม่แบบ PDF
           ============================================== */}
       <div className="absolute top-[-9999px] left-0 z-[-1]">
-        {/* ปรับความกว้างให้แคบลง (700px) เพื่อให้เหมาะกับ A4 แนวตั้ง */}
         <div ref={pdfRef} className="w-[700px] bg-white p-8 text-black font-sans mx-auto">
           
           <div className="flex justify-between items-end border-b-[2px] border-black pb-2 mb-6">
@@ -364,7 +364,6 @@ function RevenueData() {
             </h2>
           </div>
 
-          {/* 🎯 ย่อ Padding (py-1.5, px-2) และขนาดอักษร (text-[11px]) เพื่อประหยัดพื้นที่ */}
           <table className="w-full text-center border-collapse mb-6 text-[11px] border border-black">
             <thead>
               <tr className="bg-gray-100">
@@ -383,11 +382,18 @@ function RevenueData() {
                 pdfInvoices.map((inv, idx) => (
                   <tr key={idx}>
                     <td className="py-1.5 px-2 border border-black font-extrabold text-[12px]">{inv.room}</td>
-                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    {/* 🎯 แสดง Remark ในส่วน Rental ของ PDF */}
+                    <td className="py-1.5 px-2 border border-black text-right">
+                      {inv.roomRentalRemark && <span className="block text-[9px] text-gray-500 leading-none mb-0.5">({inv.roomRentalRemark})</span>}
+                      {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
                     <td className="py-1.5 px-2 border border-black text-right">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-1.5 px-2 border border-black text-right">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="py-1.5 px-2 border border-black text-right text-gray-700">{getOtherDisplay(inv, isYearlyView)}</td>
-                    <td className="py-1.5 px-2 border border-black text-right font-extrabold text-[12px]">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    {/* 🎯 ไฮไลต์ Total เป็นสีแดงถ้ายอดรวมติดลบ */}
+                    <td className={`py-1.5 px-2 border border-black text-right font-extrabold text-[12px] ${Number(inv.totalAmount) < 0 ? 'text-red-600' : ''}`}>
+                      {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
                   </tr>
                 ))
               )}
@@ -406,7 +412,6 @@ function RevenueData() {
             )}
           </table>
 
-          {/* 🎯 ปรับตาราง Profit ให้รวบรัดลง ไม่ให้กางยาวจนล้นจอแนวตั้ง */}
           <div className="font-extrabold text-[13px] mb-2">Profit Analysis</div>
           <table className="w-full text-center border-collapse mb-4 text-[11px] border border-black">
             <thead>
@@ -456,13 +461,17 @@ function RevenueData() {
             <div className="text-[10px] mb-1">2. Water bill is 7 baht per 1 unit</div>
             <div className="text-[10px] mb-1">3. (Wds) = Withholding deposit (การยึดเงินประกัน)</div>
             <div className="text-[10px] mb-1">4. (Ds) = Deposit (ค่ามัดจำ)</div>
-            <div className="text-[10px]">5. (Op) = Outstanding Payment (ค้างชำระ)</div>
+            <div className="text-[10px] mb-1">5. (Op) = Outstanding Payment (ค้างชำระ)</div>
+            {/* 🎯 เพิ่มคำอธิบายตัวย่อ (Rf) */}
+            <div className="text-[10px]">6. (Rf) = Refund (คืนเงิน)</div>
           </div>
           
         </div>
       </div>
 
-      {/* หน้าเว็บหลัก (Dashboard) */}
+      {/* ==============================================
+          หน้าเว็บหลัก (Dashboard)
+          ============================================== */}
       <div className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full print:hidden">
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -547,11 +556,18 @@ function RevenueData() {
                   displayInvoices.map((inv, index) => (
                     <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
                       <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      {/* 🎯 แสดง Remark ในช่อง Rental บนหน้าเว็บ */}
+                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
+                        {inv.roomRentalRemark && <span className="text-[11px] text-gray-500 mr-1 font-medium">({inv.roomRentalRemark})</span>}
+                        {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      </td>
                       <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                       <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                       <td className="py-3 px-4 text-right text-gray-600 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
-                      <td className="py-3 px-4 text-right font-bold text-gray-900 whitespace-nowrap">{Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      {/* 🎯 ไฮไลต์ Total เป็นสีแดงถ้ายอดรวมติดลบ */}
+                      <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${Number(inv.totalAmount) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                        {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      </td>
                       
                       {!isYearlyView && (
                         <td className="py-3 px-4 text-center border-l border-gray-100">
@@ -672,7 +688,7 @@ function RevenueData() {
                   <td className="py-3 px-4 text-right font-bold text-[#27AE60] whitespace-nowrap">{pdfTotalRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="border-b border-gray-300 hover:bg-gray-50">
-                  <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">Other (Ds, Wds, Op)</td>
+                  <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">Other (Ds, Wds, Op, Rf)</td>
                   <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{pdfTotalOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">0.00</td>
                   <td className="py-3 px-4 text-right font-bold text-[#27AE60] whitespace-nowrap">{pdfTotalOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>

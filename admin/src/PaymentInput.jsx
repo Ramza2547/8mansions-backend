@@ -9,7 +9,8 @@ function PaymentInput() {
   const [occupiedRooms, setOccupiedRooms] = useState([]);
   
   const [formData, setFormData] = useState({
-    room: '', name: '', dueDate: '', roomRental: '',
+    room: '', name: '', dueDate: '', 
+    roomRentalRemark: '', roomRental: '', // 🎯 เพิ่ม roomRentalRemark
     oldElectric: '', newElectric: '', oldWater: '', newWater: '',
     hasOther: false, otherDetail: '', otherAmount: ''
   });
@@ -23,14 +24,12 @@ function PaymentInput() {
         if (Array.isArray(response.data)) {
           const occupied = [];
           
-          // 🛠️ จุดที่แก้ไข: ค้นหาลูกค้าที่จับคู่กับชื่อห้องเป๊ะๆ (ไม่ใช้ Index แล้ว)
           roomNames.forEach((room) => {
             const customerInRoom = response.data.find(c => {
               const dbRoom = String(c.room || c.room_number || c.room_name || "").toUpperCase().trim();
               return dbRoom === room.toUpperCase();
             });
 
-            // ถ้าเจอว่ามีลูกค้าอยู่ห้องนี้จริงๆ ถึงจะเพิ่มเข้าไปใน Dropdown
             if (customerInRoom) {
               occupied.push({ room: room, name: customerInRoom.name });
             }
@@ -54,7 +53,6 @@ function PaymentInput() {
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleOtherCheck = (e) => setFormData({ ...formData, hasOther: e.target.checked, otherDetail: '', otherAmount: '' });
 
-  // 🎯 ฟังก์ชันกันพัง 1: ตรวจสอบวันที่ก่อนเซฟ
   const handleDateChange = (date) => {
     if (!date || isNaN(date.getTime())) {
       setFormData({ ...formData, dueDate: '' });
@@ -64,7 +62,6 @@ function PaymentInput() {
     setFormData({ ...formData, dueDate: dateStr });
   };
 
-  // 🎯 ฟังก์ชันกันพัง 2: เช็คค่าก่อนส่งให้ปฏิทิน
   const getValidDate = (dateStr) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
@@ -73,8 +70,10 @@ function PaymentInput() {
 
   const isDeposit = formData.hasOther && formData.otherDetail === 'Deposit';
   const isWithholding = formData.hasOther && formData.otherDetail === 'Withholding Deposit';
+  const isRefund = formData.hasOther && formData.otherDetail === 'Refund'; // 🎯 เช็คสถานะ Refund
   
   const disableRoomRental = isWithholding; 
+  // 🎯 Refund สามารถกรอกค่าน้ำค่าไฟได้ จึงไม่ไปตั้งค่าเป็น true ให้ disableUtils
   const disableUtils = isWithholding || isDeposit; 
 
   const handleNext = () => {
@@ -84,7 +83,7 @@ function PaymentInput() {
       if (!formData.otherDetail) return alert('กรุณาเลือกรายละเอียดในช่อง Other');
       if (!formData.otherAmount) return alert('กรุณากรอกจำนวนเงินในช่อง Other');
     }
-    if (!disableRoomRental && !formData.roomRental) return alert('กรุณากรอกค่าเช่าห้อง (Room Rental)');
+    if (!disableRoomRental && !formData.roomRental) return alert('กรุณากรอกยอดเงินค่าเช่าห้อง/ค่าบริการ (Room Rental)');
     if (!disableUtils) {
       if (!formData.oldElectric || !formData.newElectric || !formData.oldWater || !formData.newWater) 
         return alert('กรุณากรอกมิเตอร์ให้ครบทุกช่อง');
@@ -162,6 +161,7 @@ function PaymentInput() {
                       <option value="Deposit">Deposit</option>
                       <option value="Withholding Deposit">Withholding Deposit</option>
                       <option value="Outstanding Payment">Outstanding Payment</option>
+                      <option value="Refund">Refund (คืนเงิน)</option> {/* 🎯 เพิ่มตัวเลือก Refund */}
                     </select>
                   </div>
                   <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
@@ -174,7 +174,11 @@ function PaymentInput() {
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4 mt-2">
               <label className={`font-medium text-sm sm:text-base ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
-              <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} className={`w-full p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              {/* 🎯 แบ่งเป็น 2 ช่อง: ช่องใส่ Detail และช่องใส่จำนวนเงิน */}
+              <div className="flex gap-2 w-full">
+                <input type="text" name="roomRentalRemark" value={disableRoomRental ? '' : formData.roomRentalRemark} onChange={handleChange} disabled={disableRoomRental} placeholder="รายละเอียด (เช่น Cleaning)" className={`w-1/2 p-2 border rounded outline-none text-sm ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} placeholder="จำนวนเงิน" className={`w-1/2 p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">

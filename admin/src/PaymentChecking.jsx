@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
-import axios from 'axios'; // 🎯 อย่าลืม import axios
+import axios from 'axios'; 
 
 function PaymentChecking() {
   const navigate = useNavigate();
@@ -20,16 +20,25 @@ function PaymentChecking() {
 
   const isDeposit = data.hasOther && data.otherDetail === 'Deposit';
   const isWithholding = data.hasOther && data.otherDetail === 'Withholding Deposit';
+  const isRefund = data.hasOther && data.otherDetail === 'Refund';
+
   const disableRoomRental = isWithholding;
   const disableUtils = isWithholding || isDeposit;
 
-  const roomRental = disableRoomRental ? 0 : Number(data.roomRental) || 0;
+  // แปลงค่าที่กรอก - ให้เป็น 0 ตอนคำนวณ
+  const roomRental = disableRoomRental || data.roomRental === '-' ? 0 : Number(data.roomRental) || 0;
+  
   const elecUnit = disableUtils ? 0 : (Number(data.newElectric) || 0) - (Number(data.oldElectric) || 0);
   const waterUnit = disableUtils ? 0 : (Number(data.newWater) || 0) - (Number(data.oldWater) || 0);
   
   const elecBill = disableUtils ? 0 : elecUnit * 5; 
   const waterBill = disableUtils ? 0 : waterUnit * 7; 
-  const otherAmt = data.hasOther ? (Number(data.otherAmount) || 0) : 0;
+  
+  let otherAmt = data.hasOther ? (Number(data.otherAmount) || 0) : 0;
+  if (isRefund) {
+    otherAmt = -Math.abs(otherAmt);
+  }
+  
   const totalAmount = roomRental + elecBill + waterBill + otherAmt;
 
   let billingPeriod = '-';
@@ -57,25 +66,23 @@ function PaymentChecking() {
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
 
-    // โหลด PDF ลงเครื่อง
     html2pdf().set(opt).from(element).save();
 
-    // 🎯 เตรียมข้อมูลบิลสำหรับส่งเข้า Backend
     const newInvoiceRecord = {
       room: data.room,
       name: data.name,
       dueDate: data.dueDate,
       billingMonth: billingPeriod,
       roomRental: roomRental,
+      roomRentalRemark: data.roomRentalRemark || '', 
       elecBill: elecBill,
       waterBill: waterBill,
-      remark: data.hasOther ? `${data.otherDetail} (${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})})` : '',
+      remark: data.hasOther ? data.otherDetail : '', 
       totalAmount: totalAmount,
       isPaid: false
     };
 
     try {
-      // 🎯 ยิงข้อมูลไปเก็บที่ Database (Backend) แทน LocalStorage
       await axios.post('https://eightmansions-backend.onrender.com/api/invoices/', newInvoiceRecord);
       navigate('/admin/payment/success');
     } catch (error) {
@@ -160,12 +167,18 @@ function PaymentChecking() {
             </thead>
             <tbody>
               <tr className="border-b border-gray-200">
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">Room Rental</td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">
+                  {/* 🎯 ตัดคำว่า Room Rental ออกเมื่อเลือก Refund */}
+                  {isRefund ? (data.roomRentalRemark || '-') : 'Room Rental'}
+                </td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-right text-[8px] sm:text-sm text-gray-500">-</td>
-                <td className="py-2 sm:py-4 text-right text-[9px] sm:text-base text-gray-800">{disableRoomRental ? '-' : roomRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2 sm:py-4 text-[9px] sm:text-base text-right text-gray-800">
+                  {/* 🎯 ถ้าใส่ - มา ก็ให้โชว์ - ตรงๆ ในไฟล์ PDF เลย */}
+                  {disableRoomRental ? '-' : (data.roomRental === '-' ? '-' : roomRental.toLocaleString('en-US', {minimumFractionDigits: 2}))}
+                </td>
               </tr>
               <tr className="border-b border-gray-200">
                 <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">Electricity</td>
@@ -185,12 +198,16 @@ function PaymentChecking() {
               </tr>
               {data.hasOther && (
                 <tr className="border-b border-gray-400 bg-yellow-50/50">
-                  <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-800 font-bold italic truncate max-w-[60px] sm:max-w-none">Other <span className="hidden sm:inline">({data.otherDetail})</span></td>
+                  <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-800 font-bold italic truncate max-w-[60px] sm:max-w-none">
+                    Other <span className="hidden sm:inline">({data.otherDetail})</span>
+                  </td>
                   <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                   <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                   <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                   <td className="py-2 sm:py-4 text-right text-[8px] sm:text-sm text-gray-500">-</td>
-                  <td className="py-2 sm:py-4 text-[9px] sm:text-base text-right text-gray-800 font-bold">{otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className={`py-2 sm:py-4 text-[9px] sm:text-base text-right font-bold ${isRefund ? 'text-red-600' : 'text-gray-800'}`}>
+                    {otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -207,7 +224,7 @@ function PaymentChecking() {
             </div>
             <div className="text-right">
               <p className="text-[8px] sm:text-sm font-bold text-gray-800 uppercase mb-1 sm:mb-2">TOTAL DUE</p>
-              <p className="text-[14px] sm:text-3xl font-extrabold text-gray-900 border-t-2 sm:border-t-4 border-double border-gray-800 pt-1 sm:pt-2">
+              <p className={`text-[14px] sm:text-3xl font-extrabold border-t-2 sm:border-t-4 border-double border-gray-800 pt-1 sm:pt-2 ${totalAmount < 0 ? 'text-red-600' : 'text-gray-900'}`}>
                 THB {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
               </p>
             </div>

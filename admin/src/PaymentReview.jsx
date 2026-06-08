@@ -10,7 +10,7 @@ function PaymentReview() {
 
   const [formData, setFormData] = useState({
     room: initialData.room || '', name: initialData.name || '', dueDate: initialData.dueDate || '',
-    roomRentalRemark: initialData.roomRentalRemark || '', roomRental: initialData.roomRental || '', // 🎯 รับค่า Remark
+    roomRentalRemark: initialData.roomRentalRemark || '', roomRental: initialData.roomRental || '', 
     oldElectric: initialData.oldElectric || '', newElectric: initialData.newElectric || '',
     oldWater: initialData.oldWater || '', newWater: initialData.newWater || '',
     hasOther: initialData.hasOther || false, otherDetail: initialData.otherDetail || '', otherAmount: initialData.otherAmount || ''
@@ -44,22 +44,23 @@ function PaymentReview() {
 
   const isDeposit = formData.hasOther && formData.otherDetail === 'Deposit';
   const isWithholding = formData.hasOther && formData.otherDetail === 'Withholding Deposit';
-  const isRefund = formData.hasOther && formData.otherDetail === 'Refund'; // 🎯 ตรวจสอบ Refund
+  const isRefund = formData.hasOther && formData.otherDetail === 'Refund'; 
 
   const disableRoomRental = isWithholding;
   const disableUtils = isWithholding || isDeposit;
 
-  const roomRental = disableRoomRental ? 0 : Number(formData.roomRental) || 0;
+  // ดักจับเครื่องหมายลบในยอด Room Rental ให้มีค่าเป็น 0 เพื่อไม่ให้ผลรวมพัง
+  const roomRental = disableRoomRental || formData.roomRental === '-' ? 0 : Number(formData.roomRental) || 0;
+  
   const elecUnit = disableUtils ? 0 : (Number(formData.newElectric) || 0) - (Number(formData.oldElectric) || 0);
   const waterUnit = disableUtils ? 0 : (Number(formData.newWater) || 0) - (Number(formData.oldWater) || 0);
   
   const elecBill = elecUnit * 5; 
   const waterBill = waterUnit * 7; 
   
-  // 🎯 ถ้ารายการเป็น Refund จะเปลี่ยนยอด Other ให้กลายเป็นยอดติดลบทันที
   let otherAmt = formData.hasOther ? (Number(formData.otherAmount) || 0) : 0;
   if (isRefund) {
-    otherAmt = -Math.abs(otherAmt); // บังคับแปลงเป็นลบ ไม่ว่าแอดมินจะกรอกมาเป็นบวกหรือลบ
+    otherAmt = -Math.abs(otherAmt); 
   }
 
   const totalAmount = roomRental + elecBill + waterBill + otherAmt;
@@ -122,7 +123,6 @@ function PaymentReview() {
                 </div>
                 <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0">
                   <label className={`font-bold ${isRefund ? 'text-red-800' : 'text-gray-800'}`}>Amount (THB)</label>
-                  {/* 🎯 แสดงยอดติดลบถ้าเป็น Refund เพื่อความชัดเจน */}
                   <div className="relative w-full">
                     {isRefund && <span className="absolute left-3 top-2 font-bold text-red-600">-</span>}
                     <input type="number" name="otherAmount" value={formData.otherAmount} onChange={handleChange} className={`w-full p-2 bg-white border rounded outline-none font-bold ${isRefund ? 'border-red-400 focus:ring-2 focus:ring-red-200 pl-6 text-red-600' : 'border-yellow-400 focus:ring-2 focus:ring-yellow-200'}`} />
@@ -132,13 +132,28 @@ function PaymentReview() {
             )}
 
             <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-2">
-              <label className={`font-bold sm:font-normal ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
-              {/* 🎯 ช่อง Room Rental แตกเป็นสองส่วนในหน้า Review */}
-              <div className="flex gap-2 w-full">
-                <div className={`w-1/2 p-2 border rounded text-sm overflow-hidden whitespace-nowrap text-ellipsis ${disableRoomRental ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
-                  {formData.roomRentalRemark || '-'}
-                </div>
-                <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} className={`w-1/2 p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              {isRefund || disableRoomRental ? (
+                  <label className="hidden sm:block"></label>
+              ) : (
+                  <label className={`font-bold sm:font-normal ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>
+                    Room Rental (THB)
+                  </label>
+              )}
+              
+              <div className={`flex gap-2 w-full ${isRefund ? 'col-span-2 sm:col-span-1' : ''}`}> 
+                {isRefund && (
+                  <div className={`w-1/2 p-2 border rounded text-sm overflow-hidden whitespace-nowrap text-ellipsis ${disableRoomRental ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
+                    {formData.roomRentalRemark ? `(${formData.roomRentalRemark})` : '-'}
+                  </div>
+                )}
+                <input 
+                  type="text" 
+                  name="roomRental" 
+                  value={disableRoomRental ? '' : formData.roomRental} 
+                  onChange={handleChange} 
+                  disabled={disableRoomRental} 
+                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-2 border rounded outline-none font-medium ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                />
               </div>
             </div>
 
@@ -180,7 +195,6 @@ function PaymentReview() {
 
             <div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-4">
               <label className="text-gray-900 font-extrabold text-lg">Total</label>
-              {/* 🎯 ถ้ายอดรวมติดลบ จะแสดงเป็นสีแดงให้ชัดเจน */}
               <div className={`w-full p-2 border-b font-extrabold text-xl sm:text-2xl ${totalAmount < 0 ? 'bg-red-200 border-red-400 text-red-700' : 'bg-gray-300 border-gray-400 text-green-700'}`}>
                 {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
               </div>

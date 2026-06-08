@@ -557,8 +557,12 @@ function RevenueData() {
                     <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
                       <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
                       {/* 🎯 แสดง Remark ในช่อง Rental บนหน้าเว็บ */}
+                      {/* 🎯 อัปเกรด: แสดง Remark ในวงเล็บหน้ายอด Rental ในหน้า Revenue */}
                       <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
-                        {inv.roomRentalRemark && <span className="text-[11px] text-gray-500 mr-1 font-medium">({inv.roomRentalRemark})</span>}
+                        {inv.roomRentalRemark && inv.roomRentalRemark !== '-' 
+                          ? <span className="text-[11px] text-gray-500 mr-1 font-medium">({inv.roomRentalRemark}) </span> 
+                          : null
+                        }
                         {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
                       </td>
                       <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>

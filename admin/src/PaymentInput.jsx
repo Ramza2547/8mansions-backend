@@ -172,12 +172,23 @@ function PaymentInput() {
               )}
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4 mt-2">
-              <label className={`font-medium text-sm sm:text-base ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
-              {/* 🎯 แบ่งเป็น 2 ช่อง: ช่องใส่ Detail และช่องใส่จำนวนเงิน */}
+<div className="flex flex-col sm:grid sm:grid-cols-2 items-start sm:items-center gap-1 sm:gap-0 mt-2">
+              <label className={`font-bold sm:font-normal ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
               <div className="flex gap-2 w-full">
-                <input type="text" name="roomRentalRemark" value={disableRoomRental ? '' : formData.roomRentalRemark} onChange={handleChange} disabled={disableRoomRental} placeholder="รายละเอียด (เช่น Cleaning)" className={`w-1/2 p-2 border rounded outline-none text-sm ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
-                <input type="number" name="roomRental" value={disableRoomRental ? '' : formData.roomRental} onChange={handleChange} disabled={disableRoomRental} placeholder="จำนวนเงิน" className={`w-1/2 p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                {/* 🎯 ซ่อน/โชว์ กล่องรายละเอียดสีเทา โดยเช็คจาก isRefund */}
+                {isRefund && (
+                  <div className={`w-1/2 p-2 border rounded text-sm overflow-hidden whitespace-nowrap text-ellipsis ${disableRoomRental ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
+                    {formData.roomRentalRemark || '-'}
+                  </div>
+                )}
+                <input 
+                  type="number" 
+                  name="roomRental" 
+                  value={disableRoomRental ? '' : formData.roomRental} 
+                  onChange={handleChange} 
+                  disabled={disableRoomRental} 
+                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                />
               </div>
             </div>
 

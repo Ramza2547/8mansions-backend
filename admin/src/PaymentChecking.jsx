@@ -53,7 +53,7 @@ function PaymentChecking() {
     ? new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : '-';
 
-  const handleFinish = async () => {
+const handleFinish = async () => {
     const element = invoiceRef.current;
     const fileNamePeriod = billingPeriod.replace(/\s+/g, '');
     const filename = `8Mansions_${data.room}_${fileNamePeriod}.pdf`;
@@ -68,13 +68,15 @@ function PaymentChecking() {
 
     html2pdf().set(opt).from(element).save();
 
+    // 🎯 แก้ไขตรงนี้: ส่งไปดักทั้ง 2 แบบให้ Django เข้าใจ
     const newInvoiceRecord = {
       room: data.room,
       name: data.name,
       dueDate: data.dueDate,
       billingMonth: billingPeriod,
       roomRental: roomRental,
-      roomRentalRemark: data.roomRentalRemark || '', 
+      roomRentalRemark: data.roomRentalRemark || '', // สำหรับหน้าบ้าน
+      room_rental_remark: data.roomRentalRemark || '', // 🎯 ดักส่งให้ Django หลังบ้าน (snake_case)
       elecBill: elecBill,
       waterBill: waterBill,
       remark: data.hasOther ? data.otherDetail : '', 

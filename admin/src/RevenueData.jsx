@@ -270,6 +270,10 @@ function RevenueData() {
       if (!grouped[inv.room]) {
         grouped[inv.room] = { id: inv.room, room: inv.room, roomRentalRemark: '', roomRental: 0, elecBill: 0, waterBill: 0, totalAmount: 0, remark: '-', isPaid: true };
       }
+      // 🎯 ดักทั้งสองรูปแบบเผื่อการทำงานผิดพลาดของ Backend
+      const remarkVal = inv.roomRentalRemark || inv.room_rental_remark || '';
+      if (remarkVal) grouped[inv.room].roomRentalRemark = remarkVal;
+
       grouped[inv.room].roomRental += Number(inv.roomRental) || 0;
       grouped[inv.room].elecBill += Number(inv.elecBill) || 0;
       grouped[inv.room].waterBill += Number(inv.waterBill) || 0;
@@ -313,7 +317,6 @@ function RevenueData() {
   const pdfGrandTotal = pdfInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
   const pdfTotalOther = pdfGrandTotal - pdfTotalRental - pdfTotalElectric - pdfTotalWater;
 
-  // 🎯 อัปเดต: เพิ่มเช็ค (Refund)
   const getOtherDisplay = (inv, isYearly) => {
     const otherAmt = (Number(inv.totalAmount) - Number(inv.roomRental) - Number(inv.elecBill) - Number(inv.waterBill)) || 0;
     if (Math.abs(otherAmt) < 0.01) return '0.00';
@@ -324,7 +327,7 @@ function RevenueData() {
     if (lower.includes('withholding')) prefix = '(Wds) ';
     else if (lower.includes('deposit')) prefix = '(Ds) ';
     else if (lower.includes('outstanding')) prefix = '(Op) ';
-    else if (lower.includes('refund')) prefix = '(Rf) '; // 🎯 เพิ่ม Refund เข้าไป
+    else if (lower.includes('refund')) prefix = '(Rf) '; 
     return `${prefix}${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
   };
 
@@ -379,23 +382,27 @@ function RevenueData() {
               {pdfInvoices.length === 0 ? (
                 <tr><td colSpan="6" className="py-6 text-gray-500 italic border border-black text-sm">No paid invoices available.</td></tr>
               ) : (
-                pdfInvoices.map((inv, idx) => (
-                  <tr key={idx}>
-                    <td className="py-1.5 px-2 border border-black font-extrabold text-[12px]">{inv.room}</td>
-                    {/* 🎯 แสดง Remark ในส่วน Rental ของ PDF */}
-                    <td className="py-1.5 px-2 border border-black text-right">
-                      {inv.roomRentalRemark && <span className="block text-[9px] text-gray-500 leading-none mb-0.5">({inv.roomRentalRemark})</span>}
-                      {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                    </td>
-                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-1.5 px-2 border border-black text-right">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-1.5 px-2 border border-black text-right text-gray-700">{getOtherDisplay(inv, isYearlyView)}</td>
-                    {/* 🎯 ไฮไลต์ Total เป็นสีแดงถ้ายอดรวมติดลบ */}
-                    <td className={`py-1.5 px-2 border border-black text-right font-extrabold text-[12px] ${Number(inv.totalAmount) < 0 ? 'text-red-600' : ''}`}>
-                      {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                    </td>
-                  </tr>
-                ))
+                pdfInvoices.map((inv, idx) => {
+                  // 🎯 ดักทั้งรูปแบบ camelCase และ snake_case เผื่อความชัวร์ของ API หลังบ้าน
+                  const currentRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
+                  return (
+                    <tr key={idx}>
+                      <td className="py-1.5 px-2 border border-black font-extrabold text-[12px]">{inv.room}</td>
+                      <td className="py-1.5 px-2 border border-black text-right">
+                        {currentRemark && currentRemark !== '-' && (
+                          <span className="block text-[9px] text-gray-500 leading-none mb-0.5">({currentRemark})</span>
+                        )}
+                        {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      </td>
+                      <td className="py-1.5 px-2 border border-black text-right">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-2 border border-black text-right">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-2 border border-black text-right text-gray-700">{getOtherDisplay(inv, isYearlyView)}</td>
+                      <td className={`py-1.5 px-2 border border-black text-right font-extrabold text-[12px] ${Number(inv.totalAmount) < 0 ? 'text-red-600' : ''}`}>
+                        {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
             {pdfInvoices.length > 0 && (
@@ -462,7 +469,6 @@ function RevenueData() {
             <div className="text-[10px] mb-1">3. (Wds) = Withholding deposit (การยึดเงินประกัน)</div>
             <div className="text-[10px] mb-1">4. (Ds) = Deposit (ค่ามัดจำ)</div>
             <div className="text-[10px] mb-1">5. (Op) = Outstanding Payment (ค้างชำระ)</div>
-            {/* 🎯 เพิ่มคำอธิบายตัวย่อ (Rf) */}
             <div className="text-[10px]">6. (Rf) = Refund (คืนเงิน)</div>
           </div>
           
@@ -553,56 +559,58 @@ function RevenueData() {
                 {displayInvoices.length === 0 ? (
                   <tr><td colSpan={isYearlyView ? "6" : "8"} className="text-center py-10 text-gray-500 font-medium">No data available for this selection.</td></tr>
                 ) : (
-                  displayInvoices.map((inv, index) => (
-                    <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
-                      <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
-                      {/* 🎯 แสดง Remark ในช่อง Rental บนหน้าเว็บ */}
-                      {/* 🎯 อัปเกรด: แสดง Remark ในวงเล็บหน้ายอด Rental ในหน้า Revenue */}
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
-                        {inv.roomRentalRemark && inv.roomRentalRemark !== '-' 
-                          ? <span className="text-[11px] text-gray-500 mr-1 font-medium">({inv.roomRentalRemark}) </span> 
-                          : null
-                        }
-                        {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                      </td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-3 px-4 text-right text-gray-600 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
-                      {/* 🎯 ไฮไลต์ Total เป็นสีแดงถ้ายอดรวมติดลบ */}
-                      <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${Number(inv.totalAmount) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                        {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                      </td>
-                      
-                      {!isYearlyView && (
-                        <td className="py-3 px-4 text-center border-l border-gray-100">
-                          <label className="flex items-center justify-center cursor-pointer group">
-                            <input 
-                              type="checkbox" 
-                              checked={inv.isPaid} 
-                              onChange={() => handleTogglePaid(inv.id)}
-                              className="w-5 h-5 cursor-pointer accent-green-600 transition-transform group-hover:scale-110"
-                            />
-                            <span className={`ml-2 text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${inv.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                              {inv.isPaid ? 'PAID' : 'PENDING'}
-                            </span>
-                          </label>
+                  displayInvoices.map((inv, index) => {
+                    // 🎯 ดักทั้งรูปแบบ camelCase และ snake_case เผื่อความชัวร์ของ API หลังบ้าน
+                    const webRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
+                    return (
+                      <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
+                        <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
+                        
+                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
+                          {webRemark && webRemark !== '-' && (
+                            <span className="text-[11px] text-gray-500 mr-1 font-medium">({webRemark})</span>
+                          )}
+                          {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
                         </td>
-                      )}
-                      
-                      {!isYearlyView && (
-                        <td className="py-3 px-2 text-center border-l border-gray-100">
-                          <button 
-                            onClick={() => !inv.isPaid && confirmDelete(inv.id)} 
-                            disabled={inv.isPaid}
-                            className={`p-2 rounded-full transition-colors ${inv.isPaid ? 'text-gray-300 cursor-not-allowed' : 'text-red-400 hover:text-red-700 hover:bg-red-50'}`}
-                            title={inv.isPaid ? "Cannot delete paid invoice" : "Delete Invoice"}
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
+                        
+                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td className="py-3 px-4 text-right text-gray-600 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
+                        <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${Number(inv.totalAmount) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                          {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
                         </td>
-                      )}
-                    </tr>
-                  ))
+                        
+                        {!isYearlyView && (
+                          <td className="py-3 px-4 text-center border-l border-gray-100">
+                            <label className="flex items-center justify-center cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                checked={inv.isPaid} 
+                                onChange={() => handleTogglePaid(inv.id)}
+                                className="w-5 h-5 cursor-pointer accent-green-600 transition-transform group-hover:scale-110"
+                              />
+                              <span className={`ml-2 text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${inv.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                {inv.isPaid ? 'PAID' : 'PENDING'}
+                              </span>
+                            </label>
+                          </td>
+                        )}
+                        
+                        {!isYearlyView && (
+                          <td className="py-3 px-2 text-center border-l border-gray-100">
+                            <button 
+                              onClick={() => !inv.isPaid && confirmDelete(inv.id)} 
+                              disabled={inv.isPaid}
+                              className={`p-2 rounded-full transition-colors ${inv.isPaid ? 'text-gray-300 cursor-not-allowed' : 'text-red-400 hover:text-red-700 hover:bg-red-50'}`}
+                              title={inv.isPaid ? "Cannot delete paid invoice" : "Delete Invoice"}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
               {displayInvoices.length > 0 && (

@@ -58,6 +58,7 @@ class Invoice(models.Model):
     totalAmount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     isPaid = models.BooleanField(default=False) # สถานะการจ่ายเงิน
     createdAt = models.DateTimeField(auto_now_add=True)
+    room_rental_remark = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"Invoice {self.room} - {self.billingMonth}"

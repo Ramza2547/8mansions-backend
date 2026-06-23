@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
+import os
 
 # ==========================================
 # 1. ฟังก์ชันสำหรับระบบ Login (ฝังโค้ดสายลับไว้แล้ว)
@@ -121,8 +122,11 @@ class HistoryLogViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(customer_id=customer_id)
         return queryset
 
-# 🎯 ชี้ Path ไปที่โปรแกรม Tesseract ในเครื่อง (อย่าลืมแก้ให้ตรงกับเครื่องอ้วนนะครับ)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# 🌟 2. อัปเกรดระบบหาตำแหน่ง Tesseract แบบอัตโนมัติ
+# (os.name == 'nt' หมายถึงกำลังรันอยู่บน Windows)
+if os.name == 'nt':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# ถ้าไม่ใช่ Windows (เช่นอยู่บน Render) ระบบจะไปเรียกใช้ Tesseract ของฝั่ง Linux แทน
 
 class PassportOCRView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -252,7 +256,9 @@ class PassportOCRView(APIView):
             })
             
         except Exception as e:
-            return Response({'error': 'การประมวลผลผิดพลาด'}, status=500)
+            import traceback
+            print("🚨 OCR Error Detail:", traceback.format_exc()) # พิมพ์ลง Logs ของ Render
+            return Response({'error': f'การประมวลผลผิดพลาด: {str(e)}'}, status=500)
         
 # ดาวน์โหลดดิกชันนารี (ใส่ไว้ข้างนอกคลาสเพื่อให้โหลดแค่ครั้งเดียว)
 nltk.download('vader_lexicon', quiet=True)

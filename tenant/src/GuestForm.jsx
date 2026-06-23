@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+// 🎯 Import ไลบรารีปฏิทินและ CSS ของมัน
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 function GuestForm() {
   const navigate = useNavigate();
@@ -31,29 +34,28 @@ function GuestForm() {
     }
   }, [ocrData]);
 
-  const convertDmyToYmd = (dmyStr) => {
-    if (!dmyStr || !dmyStr.includes('/')) return '';
-    const [day, month, year] = dmyStr.split('/');
-    return `${year}-${month}-${day}`;
+  // ตัวแปลง Date เป็น DD/MM/YYYY
+  const formatDateToDMY = (dateObj) => {
+    if (!dateObj) return '';
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = dateObj.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  // ตัวแปลง DD/MM/YYYY กลับเป็น Date เพื่อให้ DatePicker เข้าใจ
+  const parseDMYToDate = (dmyStr) => {
+    if (!dmyStr || !dmyStr.includes('/')) return null;
+    const [d, m, y] = dmyStr.split('/');
+    return new Date(y, m - 1, d);
   };
 
   const calculateEndDate = (startDateStr, months) => {
     if (!startDateStr || !months) return '';
-    let day, month, year;
-    if (startDateStr.includes('/')) {
-      [day, month, year] = startDateStr.split('/');
-    } else if (startDateStr.includes('-')) {
-      [year, month, day] = startDateStr.split('-');
-    } else {
-      return '';
-    }
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    date.setMonth(date.getMonth() + parseInt(months));
-    
-    const rDay = String(date.getDate()).padStart(2, '0');
-    const rMonth = String(date.getMonth() + 1).padStart(2, '0');
-    const rYear = date.getFullYear();
-    return `${rDay}/${rMonth}/${rYear}`;
+    const dateObj = parseDMYToDate(startDateStr);
+    if (!dateObj) return '';
+    dateObj.setMonth(dateObj.getMonth() + parseInt(months));
+    return formatDateToDMY(dateObj);
   };
 
   const handleChange = (e) => {
@@ -66,6 +68,16 @@ function GuestForm() {
     }
   };
 
+  // 🎯 ฟังก์ชันจัดการเมื่อผู้ใช้จิ้มเลือกวันที่จากปฏิทิน Custom
+  const handleDateChange = (date) => {
+    if (!date) {
+      setFormData({ ...formData, lease_start: '', lease_end: '' });
+      return;
+    }
+    const dmy = formatDateToDMY(date);
+    setFormData({ ...formData, lease_start: dmy, lease_end: calculateEndDate(dmy, duration) });
+  };
+
   const handleNext = (e) => {
     e.preventDefault();
     navigate('/recommend-room', { state: { formData, duration, hasSecondTenant } });
@@ -73,6 +85,7 @@ function GuestForm() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans">
+      {/* ... Navbar (ส่วนนี้คงเดิม ไม่ได้แก้ไข) ... */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex justify-between items-stretch w-full min-h-[60px] sm:min-h-[80px]">
           <div className="flex gap-4 sm:gap-10 items-center px-[5%]">
@@ -86,7 +99,6 @@ function GuestForm() {
         </div>
       </nav>
 
-      {/* 🎯 จัด Padding ให้ Responsive ขอบไม่ชิดจอเกินไป */}
       <div className="flex-1 flex justify-center items-center p-4 sm:p-6">
         <div className="bg-white p-5 sm:p-8 rounded-lg shadow-xl w-full max-w-lg my-4 sm:my-8">
           <form onSubmit={handleNext} className="flex flex-col gap-4 sm:gap-5">
@@ -139,23 +151,17 @@ function GuestForm() {
               <div className="flex flex-col gap-3">
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Lease Start Date (วันเริ่มสัญญา)</label>
-                  {/* 🎯 ปฏิทินตรงนี้ จะปรับหน้าตาตามเครื่องที่ผู้ใช้เปิด (คอม/มือถือ) อัตโนมัติครับ */}
-                  <input 
-                    type="date" 
-                    name="lease_start" 
-                    value={formData.lease_start ? convertDmyToYmd(formData.lease_start) : ''} 
-                    onChange={(e) => {
-                      const ymd = e.target.value;
-                      if (!ymd) {
-                        setFormData({ ...formData, lease_start: '', lease_end: '' });
-                        return;
-                      }
-                      const [y, m, d] = ymd.split('-');
-                      const dmy = `${d}/${m}/${y}`;
-                      setFormData({ ...formData, lease_start: dmy, lease_end: calculateEndDate(dmy, duration) });
-                    }} 
-                    className="p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#92B0C3] w-full bg-white cursor-pointer" 
-                  />
+                  {/* 🎯 เปลี่ยนจาก <input type="date"> มาเป็น <DatePicker> แบบ Custom */}
+                  <div className="w-full">
+                    <DatePicker 
+                      selected={parseDMYToDate(formData.lease_start)} 
+                      onChange={handleDateChange} 
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="DD/MM/YYYY"
+                      className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#8FAFC1] bg-white cursor-pointer"
+                      wrapperClassName="w-full"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Lease Duration (ระยะเวลาเช่า)</label>

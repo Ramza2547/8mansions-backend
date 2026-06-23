@@ -1,12 +1,13 @@
 # ใช้ Python 3.11 เป็นระบบฐาน
 FROM python:3.11-slim
 
-# 🎯 อัปเดตแพ็กเกจไลบรารี OpenCV สำหรับ Linux เวอร์ชันใหม่
+# 🎯 เพิ่ม build-essential เพื่อให้ติดตั้งแพ็กเกจ Python บางตัวได้ลื่นไหล
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-tha \
     libgl1 \
     libglib2.0-0 \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # ตั้งค่าโฟลเดอร์ทำงาน

@@ -145,66 +145,60 @@ class PassportOCRView(APIView):
 
             custom_config = r'--oem 3 --psm 6'
             extracted_text = pytesseract.image_to_string(gray_img, lang='eng', config=custom_config)
-
-            # ==========================================
+# ==========================================
             # 🇹🇭 ลอจิกใหม่สุดล้ำสำหรับ "บัตรประชาชนไทย (ID Card)"
             # ==========================================
             if doc_type == 'ID Card':
                 raw_name = ""
                 raw_last_name = ""
+                dob_formatted = ""
                 lines = extracted_text.split('\n')
-                
-                # 🎯 วนลูปอ่านทีละบรรทัด
+
                 for i, line in enumerate(lines):
+                    # 🎯 1. จับวันเกิดแบบล็อคเป้าเดือนภาษาอังกฤษ (Jan, Feb, ...) เพื่อแก้ปัญหา 01/01/2367
+                    dob_match = re.search(r'(\d{1,2})\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})', line, re.IGNORECASE)
+                    if dob_match and not dob_formatted:
+                        day = dob_match.group(1).zfill(2)
+                        month_str = dob_match.group(2).lower()[:3]
+                        year = int(dob_match.group(3))
+
+                        months_map = {'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+                                      'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'}
+                        month = months_map.get(month_str, '01')
+                        if year > 2400: year -= 543
+                        dob_formatted = f"{day}/{month}/{year}"
+
+                    # 🎯 2. กรองชื่อและนามสกุลให้เป๊ะ
                     line_lower = line.lower()
-                    
-                    # 1. หาบรรทัดที่เป็น ชื่อ (Name)
                     if 'name' in line_lower and 'last' not in line_lower and not raw_name:
                         idx = line_lower.find('name')
-                        text_after = line[idx+4:] 
+                        text_after = line[idx+4:]
+                        text_after = re.sub(r'(?i)\b(mr|mrs|miss|ms|master)\b\.?', '', text_after)
                         eng_text = re.sub(r'[^A-Za-z\s]', '', text_after).strip()
-                        raw_name = eng_text
                         
-                        # 2. 🌟 ท่าไม้ตาย: พอเจอชื่อปุ๊บ ให้ดักจับบรรทัดถัดไปทันที (1-2 บรรทัดล่าง) เพื่อหานามสกุล
-                        for j in range(1, 3):
+                        words = [w for w in eng_text.split() if len(w) >= 2]
+                        raw_name = " ".join(words)
+                        
+                        for j in range(1, 4):
                             if i + j < len(lines):
                                 next_line = lines[i+j]
-                                clean_next = re.sub(r'[^A-Za-z\s]', '', next_line).strip()
+                                cln_next = re.sub(r'[^A-Za-z\s]', '', next_line).strip()
+                                if not cln_next: continue
                                 
-                                if clean_next:
-                                    words = clean_next.split()
-                                    # กรองคำขยะที่ OCR ชอบอ่านผิดจากหน้าบัตรทิ้งให้หมด
-                                    ignore_words = ['last', 'name', 'lest', 'lasi', 'lestoame', 'lastname', 'surname', 'ae', 'ee']
-                                    # ดึงเฉพาะคำที่ยาวกว่า 1 ตัวอักษรและไม่ใช่คำขยะ
-                                    valid_words = [w for w in words if w.lower() not in ignore_words and len(w) > 1]
-                                    
-                                    if valid_words:
-                                        raw_last_name = " ".join(valid_words)
-                                        break # เจอนามสกุลแล้ว สั่งหยุดควานหา
-                        break # ได้ชื่อและนามสกุลครบแล้ว สั่งหยุดลูปหลัก
-
-                # 3. ตัดคำนำหน้าชื่อทิ้ง (Mr., Mrs., Miss, Ms., Master)
-                raw_name = re.sub(r'^(mr|mrs|miss|ms|master)\.?\s*', '', raw_name, flags=re.IGNORECASE).strip()
+                                # 🔥 เพิ่มคำขยะที่ OCR ชอบอ่านภาษาไทยพลาดลงไปใน Blacklist
+                                ignore_words = ['last', 'name', 'lest', 'lasi', 'lestoame', 'lastname', 'surname', 'ae', 'ee', 'of', 'boas', 'det', 'af', 'po', 'late']
+                                words_next = [w for w in cln_next.split() if w.lower() not in ignore_words]
+                                
+                                # คัดเฉพาะคำที่น่าจะเป็นนามสกุลจริงๆ (ยาวตั้งแต่ 3 ตัวอักษรขึ้นไป)
+                                valid_last_names = [w for w in words_next if len(w) >= 3]
+                                
+                                if valid_last_names:
+                                    raw_last_name = " ".join(words_next)
+                                    break
                 
-                # 🌟 4. ประกอบร่าง Name + Lastname ให้เป็นก้อนเดียวกันเพื่อส่งไปช่องเดียว
+                # ประกอบร่างชื่อให้สวยงาม
                 full_name = f"{raw_name} {raw_last_name}".strip()
                 full_name = " ".join(full_name.split()).title()
-
-                # 5. ค้นหาวันเกิด (Date of Birth)
-                dob_formatted = ""
-                date_matches = re.findall(r'(\d{1,2})\s*([A-Za-z]{3,})\.?\s*(\d{4})', extracted_text)
-                
-                if date_matches:
-                    day = date_matches[0][0].zfill(2)
-                    month_str = date_matches[0][1].lower()[:3]
-                    year = int(date_matches[0][2])
-
-                    months_map = {'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-                                  'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'}
-                    month = months_map.get(month_str, '01')
-
-                    if year > 2400: year -= 543
-                    dob_formatted = f"{day}/{month}/{year}"
 
                 return Response({
                     'name': full_name,

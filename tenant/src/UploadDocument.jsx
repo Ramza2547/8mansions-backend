@@ -12,9 +12,10 @@ function UploadDocument() {
   const [file2, setFile2] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🎯 State สำหรับ Custom Alert Popup แบบสวยงาม
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '', navToForm: false });
 
-  // 🎯 เพิ่มตัวแปรเช็ค URL อัตโนมัติ (รองรับทั้งเทสต์ในเครื่อง และบนเว็บจริง)
+  // 🎯 ดึง API อัตโนมัติ (ใส่ -1 ตามเซิร์ฟเวอร์ Render ตัวใหม่แล้ว)
   const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://eightmansions-backend-1.onrender.com';
@@ -36,7 +37,6 @@ function UploadDocument() {
       formData1.append('passport_image', file1);
       formData1.append('doc_type', documentType); 
 
-      // 🎯 ใช้ API_BASE_URL แทน localhost แบบตายตัว
       const res1 = await axios.post(`${API_BASE_URL}/api/ocr/passport/`, formData1, { headers: { 'Content-Type': 'multipart/form-data' } });
       let extractedData = { tenant1: res1.data };
 
@@ -53,9 +53,10 @@ function UploadDocument() {
 
     } catch (error) {
       setIsLoading(false);
-      const errorMsg = error.response?.data?.error || error.message;
+      const errorMsg = error.response?.data?.error || error.message || "Unknown error";
       console.error('OCR Error Details:', error);
       
+      // 🎯 สั่งเปิด Custom Popup แทน window.alert แบบโบราณ
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -78,12 +79,13 @@ function UploadDocument() {
       {isLoading && (
         <div className="fixed inset-0 bg-[#F0F0F0] z-[100] flex flex-col justify-center items-center p-4 text-center">
           <div className="animate-pulse flex flex-col items-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Reduce bluring</h1>
-            <h2 className="text-2xl sm:text-3xl font-medium text-gray-800">Just wait...</h2>
+            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Reduce blurring</h1>
+            <h2 className="text-xl sm:text-3xl font-medium text-gray-800">Please wait...</h2>
           </div>
         </div>
       )}
 
+      {/* 🎯 Popup สวยงามของ UploadDocument */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center">
@@ -100,7 +102,7 @@ function UploadDocument() {
             <h3 className={`text-xl font-extrabold mb-2 ${alertMessage.type === 'error' ? 'text-red-700' : 'text-yellow-600'}`}>
               {alertMessage.type === 'error' ? 'Scanning Failed' : 'Notice'}
             </h3>
-            <p className="text-gray-600 mb-6 font-medium whitespace-pre-line">{alertMessage.text}</p>
+            <p className="text-gray-600 mb-6 font-medium whitespace-pre-line text-sm sm:text-base">{alertMessage.text}</p>
             <button onClick={closeAlert} className={`px-8 py-3 font-bold text-white rounded-full transition-transform active:scale-95 w-full shadow-md ${alertMessage.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : 'bg-[#F39C12] hover:bg-[#D68910]'}`}>
               OK
             </button>
@@ -132,7 +134,7 @@ function UploadDocument() {
             </div>
 
             <div className="flex items-center gap-3">
-              <input type="checkbox" id="twoTenants" checked={hasSecondTenant} onChange={(e) => setHasSecondTenant(e.target.checked)} className="w-4 h-4 sm:w-5 sm:h-5" />
+              <input type="checkbox" id="twoTenants" checked={hasSecondTenant} onChange={(e) => setHasSecondTenant(e.target.checked)} className="w-5 h-5 cursor-pointer" />
               <label htmlFor="twoTenants" className="font-bold cursor-pointer text-sm sm:text-base">I have 2nd Tenant</label>
             </div>
 
@@ -144,8 +146,8 @@ function UploadDocument() {
             )}
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:mt-4">
-              <button onClick={() => navigate('/booking')} className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded">Back</button>
-              <button onClick={handleUpload} className="w-full sm:flex-1 bg-[#8FAFC1] hover:bg-[#7fa1b5] text-white font-bold py-3 rounded">Select (Scan)</button>
+              <button onClick={() => navigate('/booking')} className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded text-sm sm:text-base">Back</button>
+              <button onClick={handleUpload} className="w-full sm:flex-1 bg-[#8FAFC1] hover:bg-[#7fa1b5] text-white font-bold py-3 rounded text-sm sm:text-base">Select (Scan)</button>
             </div>
           </div>
         </div>

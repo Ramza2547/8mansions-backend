@@ -85,7 +85,7 @@ const handleFinish = async () => {
     };
 
     try {
-      await axios.post('https://eightmansions-backend.onrender.com/api/invoices/', newInvoiceRecord);
+      await axios.post('https://eightmansions-backend-1.onrender.com/api/invoices/', newInvoiceRecord);
       navigate('/admin/payment/success');
     } catch (error) {
       console.error("บันทึกบิลล้มเหลว:", error);

@@ -123,10 +123,10 @@ function RevenueData() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const resInvoices = await axios.get('https://eightmansions-backend.onrender.com/api/invoices/');
+        const resInvoices = await axios.get('https://eightmansions-backend-1.onrender.com/api/invoices/');
         setInvoices(resInvoices.data);
 
-        const resUtils = await axios.get('https://eightmansions-backend.onrender.com/api/utility-costs/');
+        const resUtils = await axios.get('https://eightmansions-backend-1.onrender.com/api/utility-costs/');
         const costObj = {};
         resUtils.data.forEach(item => {
           costObj[item.billingMonth] = { id: item.id, pea: Number(item.pea_cost), pwa: Number(item.pwa_cost) };
@@ -189,17 +189,17 @@ function RevenueData() {
         pwa_cost: currentMonthData.pwa
       };
 
-      const checkRes = await axios.get('https://eightmansions-backend.onrender.com/api/utility-costs/');
+      const checkRes = await axios.get('https://eightmansions-backend-1.onrender.com/api/utility-costs/');
       const existing = checkRes.data.find(item => item.billingMonth === filterMonth);
 
       if (existing) {
          try {
-           await axios.patch(`https://eightmansions-backend.onrender.com/api/utility-costs/${existing.id}/`, payload);
+           await axios.patch(`https://eightmansions-backend-1.onrender.com/api/utility-costs/${existing.id}/`, payload);
          } catch (err) {
-           await axios.patch(`https://eightmansions-backend.onrender.com/api/utility-costs/${encodeURIComponent(filterMonth)}/`, payload);
+           await axios.patch(`https://eightmansions-backend-1.onrender.com/api/utility-costs/${encodeURIComponent(filterMonth)}/`, payload);
          }
       } else {
-         const res = await axios.post('https://eightmansions-backend.onrender.com/api/utility-costs/', payload);
+         const res = await axios.post('https://eightmansions-backend-1.onrender.com/api/utility-costs/', payload);
          setUtilityCosts(prev => ({
            ...prev,
            [filterMonth]: { ...prev[filterMonth], id: res.data.id }
@@ -209,7 +209,7 @@ function RevenueData() {
       if (!isYearlyView) {
         const currentMonthInvoices = invoices.filter(inv => inv.billingMonth === filterMonth);
         const patchPromises = currentMonthInvoices.map(inv => 
-          axios.patch(`https://eightmansions-backend.onrender.com/api/invoices/${inv.id}/`, { isPaid: inv.isPaid })
+          axios.patch(`https://eightmansions-backend-1.onrender.com/api/invoices/${inv.id}/`, { isPaid: inv.isPaid })
         );
         await Promise.all(patchPromises); 
       }
@@ -232,7 +232,7 @@ function RevenueData() {
     setDeleteModal({ isOpen: false, id: null });
 
     try {
-      await axios.delete(`https://eightmansions-backend.onrender.com/api/invoices/${idToDelete}/`);
+      await axios.delete(`https://eightmansions-backend-1.onrender.com/api/invoices/${idToDelete}/`);
     } catch (error) {
       console.error("ลบข้อมูลไม่สำเร็จ", error);
     }

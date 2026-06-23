@@ -19,7 +19,7 @@ function PaymentInput() {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
+        const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/');
         if (Array.isArray(response.data)) {
           const occupied = [];
           

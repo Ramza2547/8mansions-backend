@@ -1,13 +1,15 @@
 # ใช้ Python 3.11 เป็นระบบฐาน
 FROM python:3.11-slim
 
-# 🎯 เพิ่ม build-essential เพื่อให้ติดตั้งแพ็กเกจ Python บางตัวได้ลื่นไหล
+# 🎯 เพิ่ม pkg-config และ default-libmysqlclient-dev สำหรับติดตั้ง mysqlclient
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-tha \
     libgl1 \
     libglib2.0-0 \
     build-essential \
+    pkg-config \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ตั้งค่าโฟลเดอร์ทำงาน

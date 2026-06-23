@@ -32,14 +32,14 @@ function UploadDocument() {
       formData1.append('passport_image', file1);
       formData1.append('doc_type', documentType); 
 
-      const res1 = await axios.post('http://localhost:8000/api/ocr/passport/', formData1, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res1 = await axios.post('https://eightmansions-backend.onrender.com/api/ocr/passport/', formData1, { headers: { 'Content-Type': 'multipart/form-data' } });
       let extractedData = { tenant1: res1.data };
 
       if (hasSecondTenant && file2) {
         const formData2 = new FormData();
         formData2.append('passport_image', file2);
         formData2.append('doc_type', documentType);
-        const res2 = await axios.post('http://localhost:8000/api/ocr/passport/', formData2, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res2 = await axios.post('https://eightmansions-backend.onrender.com/api/ocr/passport/', formData2, { headers: { 'Content-Type': 'multipart/form-data' } });
         extractedData.tenant2 = res2.data;
       }
 

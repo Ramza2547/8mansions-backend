@@ -12,8 +12,12 @@ function UploadDocument() {
   const [file2, setFile2] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🎯 State สำหรับ Custom Alert Popup
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '', navToForm: false });
+
+  // 🎯 เพิ่มตัวแปรเช็ค URL อัตโนมัติ (รองรับทั้งเทสต์ในเครื่อง และบนเว็บจริง)
+  const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://eightmansions-backend.onrender.com';
 
   const handleUpload = async () => {
     if (!file1) {
@@ -32,14 +36,15 @@ function UploadDocument() {
       formData1.append('passport_image', file1);
       formData1.append('doc_type', documentType); 
 
-      const res1 = await axios.post('https://eightmansions-backend.onrender.com/api/ocr/passport/', formData1, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // 🎯 ใช้ API_BASE_URL แทน localhost แบบตายตัว
+      const res1 = await axios.post(`${API_BASE_URL}/api/ocr/passport/`, formData1, { headers: { 'Content-Type': 'multipart/form-data' } });
       let extractedData = { tenant1: res1.data };
 
       if (hasSecondTenant && file2) {
         const formData2 = new FormData();
         formData2.append('passport_image', file2);
         formData2.append('doc_type', documentType);
-        const res2 = await axios.post('https://eightmansions-backend.onrender.com/api/ocr/passport/', formData2, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res2 = await axios.post(`${API_BASE_URL}/api/ocr/passport/`, formData2, { headers: { 'Content-Type': 'multipart/form-data' } });
         extractedData.tenant2 = res2.data;
       }
 
@@ -51,7 +56,6 @@ function UploadDocument() {
       const errorMsg = error.response?.data?.error || error.message;
       console.error('OCR Error Details:', error);
       
-      // 🎯 แจ้งเตือนแบบ Custom และตั้งค่าให้ไปหน้ากรอกมือตอนกด OK
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -80,7 +84,6 @@ function UploadDocument() {
         </div>
       )}
 
-      {/* 🎯 Custom Alert Popup */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center">
@@ -119,7 +122,6 @@ function UploadDocument() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center p-4">
-        {/* 🎯 ปรับ p-10 เป็น p-6 sm:p-10 เพื่อให้บนมือถือมีพื้นที่ว่างด้านข้าง */}
         <div className="bg-white p-6 sm:p-10 rounded-lg shadow-xl w-full max-w-lg text-center animate-fade-in-up">
           <h2 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] mb-6 sm:mb-8">Upload your {documentType}</h2>
           
@@ -141,7 +143,6 @@ function UploadDocument() {
               </div>
             )}
 
-            {/* 🎯 ปรับปุ่มให้ซ้อนกันบนมือถือ และเรียงแนวนอนบนจอใหญ่ */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:mt-4">
               <button onClick={() => navigate('/booking')} className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded">Back</button>
               <button onClick={handleUpload} className="w-full sm:flex-1 bg-[#8FAFC1] hover:bg-[#7fa1b5] text-white font-bold py-3 rounded">Select (Scan)</button>

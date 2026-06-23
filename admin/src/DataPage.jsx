@@ -28,7 +28,7 @@ function DataPage() {
   const fetchCustomers = async () => {
     try {
       // สามารถใส่ timeout: 15000 (15 วิ) ใน axios ได้ แต่เพื่อความชัวร์เราดัก Catch ครอบคลุมไว้
-      const response = await axios.get('https://eightmansions-backend.onrender.com/api/customers/');
+      const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/');
       if (Array.isArray(response.data)) {
         console.log("🔥 ข้อมูลจาก Database:", response.data); 
         setCustomers(response.data);
@@ -84,12 +84,12 @@ function DataPage() {
   const handleSaveEdit = async () => {
     try {
       const originalCustomer = customers.find(c => c.id === editingCustomer.id);
-      await axios.put(`https://eightmansions-backend.onrender.com/api/customers/${editingCustomer.id}/update/`, editingCustomer);
+      await axios.put(`https://eightmansions-backend-1.onrender.com/api/customers/${editingCustomer.id}/update/`, editingCustomer);
       
       const detectedChanges = trackChanges(originalCustomer, editingCustomer);
       if (detectedChanges.length > 0) {
         try {
-          await axios.post('https://eightmansions-backend.onrender.com/api/history/', {
+          await axios.post('https://eightmansions-backend-1.onrender.com/api/history/', {
             customer: editingCustomer.id,
             changes: detectedChanges
           });
@@ -119,7 +119,7 @@ function DataPage() {
     setHistoryRoom(room);
     
     try {
-      const response = await axios.get(`https://eightmansions-backend.onrender.com/api/history/?customer=${customer.id}`);
+      const response = await axios.get(`https://eightmansions-backend-1.onrender.com/api/history/?customer=${customer.id}`);
       setRoomHistoryLogs(response.data);
     } catch (error) {
       console.error("ดึงประวัติไม่สำเร็จ", error);

@@ -42,7 +42,7 @@ function BookingConfirm() {
     }
 
     try {
-      await axios.post('https://eightmansions-backend.onrender.com/api/customers/', dataToSubmit);
+      await axios.post('https://eightmansions-backend-1.onrender.com/api/customers/', dataToSubmit);
       navigate('/booking-success'); 
     } catch (error) {
       console.error('Error syncing data:', error);

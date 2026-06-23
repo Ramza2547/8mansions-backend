@@ -17,7 +17,7 @@ function UploadDocument() {
   // 🎯 เพิ่มตัวแปรเช็ค URL อัตโนมัติ (รองรับทั้งเทสต์ในเครื่อง และบนเว็บจริง)
   const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
-    : 'https://eightmansions-backend.onrender.com';
+    : 'https://eightmansions-backend-1.onrender.com';
 
   const handleUpload = async () => {
     if (!file1) {

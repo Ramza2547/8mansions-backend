@@ -12,10 +12,8 @@ function UploadDocument() {
   const [file2, setFile2] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🎯 State สำหรับ Custom Alert Popup แบบสวยงาม
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '', navToForm: false });
 
-  // 🎯 ดึง API อัตโนมัติ (ใส่ -1 ตามเซิร์ฟเวอร์ Render ตัวใหม่แล้ว)
   const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://eightmansions-backend-1.onrender.com';
@@ -56,7 +54,6 @@ function UploadDocument() {
       const errorMsg = error.response?.data?.error || error.message || "Unknown error";
       console.error('OCR Error Details:', error);
       
-      // 🎯 สั่งเปิด Custom Popup แทน window.alert แบบโบราณ
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -76,26 +73,29 @@ function UploadDocument() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans relative">
+      
+      {/* 🎯 อัปเกรดหน้า Loading: เพิ่ม Spinner วงล้อหมุน และฉากหลังกึ่งโปร่งแสงเบลอๆ */}
       {isLoading && (
-        <div className="fixed inset-0 bg-[#F0F0F0] z-[100] flex flex-col justify-center items-center p-4 text-center">
+        <div className="fixed inset-0 bg-[#F0F0F0]/90 backdrop-blur-sm z-[100] flex flex-col justify-center items-center p-4 text-center transition-all">
+          <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-black rounded-full animate-spin mb-6 shadow-lg"></div>
           <div className="animate-pulse flex flex-col items-center">
             <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Reduce blurring</h1>
-            <h2 className="text-xl sm:text-3xl font-medium text-gray-800">Please wait...</h2>
+            <h2 className="text-xl sm:text-2xl font-medium text-gray-600">Please wait...</h2>
           </div>
         </div>
       )}
 
-      {/* 🎯 Popup สวยงามของ UploadDocument */}
+      {/* 🎯 Custom Popup (ถ้าอันนี้เด้ง แสดงว่าโค้ดใหม่ทำงาน 100%) */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center">
             {alertMessage.type === 'error' && (
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-inner">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
               </div>
             )}
             {alertMessage.type === 'warning' && (
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-inner">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
             )}
@@ -124,30 +124,30 @@ function UploadDocument() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center p-4">
-        <div className="bg-white p-6 sm:p-10 rounded-lg shadow-xl w-full max-w-lg text-center animate-fade-in-up">
+        <div className="bg-white p-6 sm:p-10 rounded-xl shadow-xl w-full max-w-lg text-center animate-fade-in-up">
           <h2 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] mb-6 sm:mb-8">Upload your {documentType}</h2>
           
           <div className="flex flex-col gap-4 sm:gap-6">
-            <div className="flex flex-col items-start bg-gray-50 p-4 rounded border">
-              <label className="font-bold mb-2 text-sm sm:text-base">Tenant 1</label>
-              <input type="file" accept="image/*" onChange={(e) => setFile1(e.target.files[0])} className="w-full text-sm sm:text-base" />
+            <div className="flex flex-col items-start bg-gray-50 p-4 rounded border transition-colors hover:border-[#8FAFC1]">
+              <label className="font-bold mb-2 text-sm sm:text-base text-[#2C3E50]">Tenant 1</label>
+              <input type="file" accept="image/*" onChange={(e) => setFile1(e.target.files[0])} className="w-full text-sm sm:text-base file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e0eaf1] file:text-[#2C3E50] hover:file:bg-[#d0dfeb]" />
             </div>
 
-            <div className="flex items-center gap-3">
-              <input type="checkbox" id="twoTenants" checked={hasSecondTenant} onChange={(e) => setHasSecondTenant(e.target.checked)} className="w-5 h-5 cursor-pointer" />
-              <label htmlFor="twoTenants" className="font-bold cursor-pointer text-sm sm:text-base">I have 2nd Tenant</label>
+            <div className="flex items-center gap-3 py-1 px-2">
+              <input type="checkbox" id="twoTenants" checked={hasSecondTenant} onChange={(e) => setHasSecondTenant(e.target.checked)} className="w-5 h-5 cursor-pointer accent-[#8FAFC1]" />
+              <label htmlFor="twoTenants" className="font-bold cursor-pointer text-sm sm:text-base text-[#2C3E50]">I have 2nd Tenant</label>
             </div>
 
             {hasSecondTenant && (
-              <div className="flex flex-col items-start bg-green-50 p-4 rounded border border-green-200">
+              <div className="flex flex-col items-start bg-green-50 p-4 rounded border border-green-200 transition-colors hover:border-green-400">
                 <label className="font-bold text-green-800 mb-2 text-sm sm:text-base">Tenant 2</label>
-                <input type="file" accept="image/*" onChange={(e) => setFile2(e.target.files[0])} className="w-full text-sm sm:text-base" />
+                <input type="file" accept="image/*" onChange={(e) => setFile2(e.target.files[0])} className="w-full text-sm sm:text-base file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-800 hover:file:bg-green-200" />
               </div>
             )}
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:mt-4">
-              <button onClick={() => navigate('/booking')} className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded text-sm sm:text-base">Back</button>
-              <button onClick={handleUpload} className="w-full sm:flex-1 bg-[#8FAFC1] hover:bg-[#7fa1b5] text-white font-bold py-3 rounded text-sm sm:text-base">Select (Scan)</button>
+              <button onClick={() => navigate('/booking')} className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg shadow-sm transition-transform active:scale-95 text-sm sm:text-base">Back</button>
+              <button onClick={handleUpload} className="w-full sm:flex-1 bg-[#8FAFC1] hover:bg-[#7fa1b5] text-white font-bold py-3.5 rounded-lg shadow-sm transition-transform active:scale-95 text-sm sm:text-base">Select (Scan)</button>
             </div>
           </div>
         </div>

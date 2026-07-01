@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-// 🎯 อิมพอร์ตไฟล์ Dashboard ที่เราเพิ่งสร้างขึ้นมา
-import AdminFeedbackDashboard from './AdminFeedbackDashboard';
 
 function AdminFeedback() {
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
   const [filterMonth, setFilterMonth] = useState(''); 
   const [cardStatuses, setCardStatuses] = useState({}); 
-  
-  // 🎯 State สำหรับเปิด/ปิดหน้าต่าง Dashboard ใหม่
-  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => { fetchFeedbacks(); }, []);
 
@@ -66,17 +61,7 @@ function AdminFeedback() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans relative">
-      
-      {/* 🎯 เรียกใช้งาน Component กราฟแยกออกมาเลย จะได้ไม่ทำจอขาว */}
-      {showDashboard && (
-        <AdminFeedbackDashboard 
-          feedbacks={filteredFeedbacks} 
-          onClose={() => setShowDashboard(false)} 
-          filterMonth={filterMonth} 
-        />
-      )}
-
+    <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans">
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
@@ -136,9 +121,10 @@ function AdminFeedback() {
           </div>
         )}
 
-        <div className="flex justify-center mt-8 sm:mt-12 relative group">
+        <div className="flex justify-center mt-8 sm:mt-12">
+          {/* 🎯 เปลี่ยนปุ่ม Dashboard ให้ย้ายไปหน้ากราฟ */}
           <button 
-            onClick={() => setShowDashboard(true)}
+            onClick={() => navigate('/admin/feedback/dashboard')}
             disabled={filteredFeedbacks.length === 0}
             className={`w-full sm:w-auto py-3 px-16 rounded font-bold transition-all shadow-md 
               ${filteredFeedbacks.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-400' : 'bg-[#1A1A1A] hover:bg-gray-800 text-white active:scale-95'}`}

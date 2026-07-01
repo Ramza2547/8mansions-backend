@@ -206,43 +206,33 @@ class PassportOCRView(APIView):
                     'date_of_birth': dob_formatted
                 })
 
-# ==========================================
-            # ✈️ ลอจิกสำหรับ "พาสปอร์ต (Passport)" 
+            # ==========================================
+            # ✈️ ลอจิกสำหรับ "พาสปอร์ต (Passport)" (ใช้ของเดิม)
             # ==========================================
             lines = extracted_text.split('\n')
-            
-            # 🎯 ลอจิกใหม่: ไม่บังคับหาเครื่องหมาย '<' แล้ว (หนีปัญหาแสงสะท้อนโฮโลแกรม)
-            # หาบรรทัดที่มีความยาวเกิน 35 ตัวอักษรแทน (แถบ MRZ มาตรฐานยาว 44 ตัว)
-            mrz_lines = [line.replace(" ", "") for line in lines if len(line.replace(" ", "")) >= 35]
+            mrz_lines = [line.replace(" ", "") for line in lines if '<' in line and len(line) > 30]
 
             if len(mrz_lines) < 2:
-                return Response({'error': 'ระบบหาแถบ MRZ ไม่เจอ อาจเกิดจากแสงสะท้อนโฮโลแกรมบนพาสปอร์ต กรุณาหลีกเลี่ยงแสงสะท้อน หรือกรอกข้อมูลด้วยตนเอง'}, status=400)
+                return Response({'error': 'ระบบหาแถบ MRZ ไม่เจอ กรุณาอัปโหลดรูปที่ชัดเจน หรือกรอกข้อมูลด้วยตนเอง'}, status=400)
 
-            # 🎯 ท่าไม้ตาย: แถบ MRZ จะอยู่ 2 บรรทัดสุดท้ายของหน้าพาสปอร์ตเสมอ เราคว้ามาเลย
-            line1 = mrz_lines[-2]
-            line2 = mrz_lines[-1]
+            line1 = mrz_lines[0]
+            line2 = mrz_lines[1]
 
-            # 🎯 แปลงตัวอักษรขยะที่ OCR มักจะอ่านเพี้ยน ให้กลับเป็นเครื่องหมาย '<' เพื่อใช้ตัดคำ
-            clean_line1 = re.sub(r'[^A-Z<]', '<', line1[5:])
-            name_parts = clean_line1.split('<<')
+            name_field = line1[5:]
+            name_parts = name_field.split('<<')
             
             surname = name_parts[0].replace('<', ' ').strip()
             given_name = ""
             if len(name_parts) > 1:
-                # ลบเครื่องหมาย < ที่อาจหลงเหลืออยู่ออกให้หมด
                 given_name = name_parts[1].replace('<', ' ').strip()
 
             full_name = f"{given_name} {surname}".strip().title()
 
-            # ลอจิกสัญชาติและวันเกิด (ดึงจากบรรทัดที่ 2 ของ MRZ)
             nationality = ""
             dob_formatted = ""
 
             if len(line2) >= 20:
-                # ดึงสัญชาติ (ตำแหน่งตัวอักษรที่ 11-13 ของบรรทัดที่ 2)
                 nationality = line2[10:13].replace('<', '')
-                
-                # ดึงวันเกิด (ตำแหน่งตัวอักษรที่ 14-19)
                 dob_raw = line2[13:19]
                 
                 if dob_raw.isdigit():
@@ -250,8 +240,6 @@ class PassportOCRView(APIView):
                     month = dob_raw[2:4]
                     day = dob_raw[4:6]
                     current_year = int(datetime.now().strftime("%y"))
-                    
-                    # เช็คว่าเกิดยุค 1900 หรือ 2000
                     full_year = 2000 + year if year <= current_year else 1900 + year
                     dob_formatted = f"{day}/{month}/{full_year}"
 
@@ -279,15 +267,22 @@ class SentimentAnalysisView(APIView):
         score = sia.polarity_scores(text)
         compound = score['compound']
         
-        # ลอจิกแจ้งซ่อม (Keyword Matching)
+        # 🎯 เพิ่มคำศัพท์เฉพาะทางสำหรับงานบริการหอพัก
         repair_keywords = ['repair', 'fix', 'broken', 'not working', 'leak', 'plumbing', 'aircon', 'water']
-        is_repair = any(k in text.lower() for k in repair_keywords)
+        positive_keywords = ['fast', 'good', 'great', 'amazing', 'excellent', 'quick', 'awesome', 'best', 'clean']
+        negative_keywords = ['bad', 'slow', 'terrible', 'worst', 'rude', 'dirty', 'noisy']
         
+        text_lower = text.lower()
+        is_repair = any(k in text_lower for k in repair_keywords)
+        is_pos = any(k in text_lower for k in positive_keywords)
+        is_neg = any(k in text_lower for k in negative_keywords)
+        
+        # 🎯 ลอจิกตัดสินใจ (ถ้าเจอคีย์เวิร์ดบวก/ลบ ให้บังคับเปลี่ยนสถานะเลย)
         if is_repair:
             result = "🛠️ แจ้งซ่อม (Repair Request) 🚨"
-        elif compound >= 0.4:
+        elif compound >= 0.3 or is_pos:
             result = "🟢 เชิงบวก (Positive) 😊"
-        elif compound <= -0.4:
+        elif compound <= -0.3 or is_neg:
             result = "🔴 เชิงลบ (Negative) 😡"
         else:
             result = "⚪ ทั่วไป (Neutral) 😐"

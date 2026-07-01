@@ -267,22 +267,23 @@ class SentimentAnalysisView(APIView):
         score = sia.polarity_scores(text)
         compound = score['compound']
         
-        # 🎯 เพิ่มคำศัพท์เฉพาะทางสำหรับงานบริการหอพัก
-        repair_keywords = ['repair', 'fix', 'broken', 'not working', 'leak', 'plumbing', 'aircon', 'water']
-        positive_keywords = ['fast', 'good', 'great', 'amazing', 'excellent', 'quick', 'awesome', 'best', 'clean']
-        negative_keywords = ['bad', 'slow', 'terrible', 'worst', 'rude', 'dirty', 'noisy']
-        
         text_lower = text.lower()
-        is_repair = any(k in text_lower for k in repair_keywords)
-        is_pos = any(k in text_lower for k in positive_keywords)
-        is_neg = any(k in text_lower for k in negative_keywords)
         
-        # 🎯 ลอจิกตัดสินใจ (ถ้าเจอคีย์เวิร์ดบวก/ลบ ให้บังคับเปลี่ยนสถานะเลย)
+        # 🎯 เพิ่มคลังคำศัพท์เฉพาะทาง เพื่อช่วย AI ตัดสินใจ
+        repair_keywords = ['repair', 'fix', 'broken', 'not working', 'leak', 'plumbing', 'aircon', 'water']
+        positive_keywords = ['fast', 'good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'best']
+        negative_keywords = ['bad', 'slow', 'terrible', 'worst', 'awful', 'dirty']
+        
+        is_repair = any(k in text_lower for k in repair_keywords)
+        has_positive = any(k in text_lower for k in positive_keywords)
+        has_negative = any(k in text_lower for k in negative_keywords)
+        
+        # 🎯 กฎการตัดสินใจใหม่ (ถ้ามีคำในลิสต์ หรือคะแนนถึงเกณฑ์)
         if is_repair:
             result = "🛠️ แจ้งซ่อม (Repair Request) 🚨"
-        elif compound >= 0.3 or is_pos:
+        elif has_positive or compound >= 0.3:
             result = "🟢 เชิงบวก (Positive) 😊"
-        elif compound <= -0.3 or is_neg:
+        elif has_negative or compound <= -0.3:
             result = "🔴 เชิงลบ (Negative) 😡"
         else:
             result = "⚪ ทั่วไป (Neutral) 😐"

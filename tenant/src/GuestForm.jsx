@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// 🎯 Import ไลบรารีปฏิทินและ CSS ของมัน
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -34,7 +33,6 @@ function GuestForm() {
     }
   }, [ocrData]);
 
-  // ตัวแปลง Date เป็น DD/MM/YYYY
   const formatDateToDMY = (dateObj) => {
     if (!dateObj) return '';
     const d = String(dateObj.getDate()).padStart(2, '0');
@@ -43,7 +41,6 @@ function GuestForm() {
     return `${d}/${m}/${y}`;
   };
 
-  // ตัวแปลง DD/MM/YYYY กลับเป็น Date เพื่อให้ DatePicker เข้าใจ
   const parseDMYToDate = (dmyStr) => {
     if (!dmyStr || !dmyStr.includes('/')) return null;
     const [d, m, y] = dmyStr.split('/');
@@ -68,7 +65,15 @@ function GuestForm() {
     }
   };
 
-  // 🎯 ฟังก์ชันจัดการเมื่อผู้ใช้จิ้มเลือกวันที่จากปฏิทิน Custom
+  const handleDobChange = (date, isSecondTenant = false) => {
+    const fieldName = isSecondTenant ? 'date_of_birth_2' : 'date_of_birth';
+    if (!date) {
+      setFormData({ ...formData, [fieldName]: '' });
+      return;
+    }
+    setFormData({ ...formData, [fieldName]: formatDateToDMY(date) });
+  };
+
   const handleDateChange = (date) => {
     if (!date) {
       setFormData({ ...formData, lease_start: '', lease_end: '' });
@@ -85,7 +90,6 @@ function GuestForm() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans">
-      {/* ... Navbar (ส่วนนี้คงเดิม ไม่ได้แก้ไข) ... */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex justify-between items-stretch w-full min-h-[60px] sm:min-h-[80px]">
           <div className="flex gap-4 sm:gap-10 items-center px-[5%]">
@@ -116,7 +120,17 @@ function GuestForm() {
                 </div>
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Date of Birth (วันเกิด)</label>
-                  <input type="text" name="date_of_birth" placeholder="DD/MM/YYYY" required value={formData.date_of_birth} onChange={handleChange} className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#8FAFC1]" />
+                  <div className="w-full">
+                    {/* 🎯 ถอด Dropdown ออกเพื่อให้หน้าตาคลีนเหมือนภาพ 100% */}
+                    <DatePicker 
+                      selected={parseDMYToDate(formData.date_of_birth)} 
+                      onChange={(date) => handleDobChange(date, false)} 
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="DD/MM/YYYY"
+                      className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#8FAFC1] bg-white cursor-pointer"
+                      wrapperClassName="w-full"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -140,7 +154,17 @@ function GuestForm() {
                   </div>
                   <div>
                     <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Date of Birth (วันเกิด)</label>
-                    <input type="text" name="date_of_birth_2" placeholder="DD/MM/YYYY" required={hasSecondTenant} value={formData.date_of_birth_2} onChange={handleChange} className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-green-400" />
+                    <div className="w-full">
+                      {/* 🎯 ถอด Dropdown ออก */}
+                      <DatePicker 
+                        selected={parseDMYToDate(formData.date_of_birth_2)} 
+                        onChange={(date) => handleDobChange(date, true)} 
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="DD/MM/YYYY"
+                        className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-green-400 bg-white cursor-pointer"
+                        wrapperClassName="w-full"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -151,7 +175,6 @@ function GuestForm() {
               <div className="flex flex-col gap-3">
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Lease Start Date (วันเริ่มสัญญา)</label>
-                  {/* 🎯 เปลี่ยนจาก <input type="date"> มาเป็น <DatePicker> แบบ Custom */}
                   <div className="w-full">
                     <DatePicker 
                       selected={parseDMYToDate(formData.lease_start)} 

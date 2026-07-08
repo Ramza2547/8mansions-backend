@@ -14,8 +14,10 @@ function DataPage() {
   const [roomHistoryLogs, setRoomHistoryLogs] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // 🎯 1. เพิ่ม State สำหรับจัดการ Filter Dropdown
+  const [filterMode, setFilterMode] = useState('all');
 
-  // 🎯 State สำหรับจัดการ Custom Alert Popup (มี success, error, และ warning)
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '' });
 
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
@@ -24,10 +26,8 @@ function DataPage() {
     fetchCustomers();
   }, []);
 
-  // 🎯 อัปเกรด: ระบบ Error Handling ดักจับ Cold Start (API Timeout)
   const fetchCustomers = async () => {
     try {
-      // สามารถใส่ timeout: 15000 (15 วิ) ใน axios ได้ แต่เพื่อความชัวร์เราดัก Catch ครอบคลุมไว้
       const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/');
       if (Array.isArray(response.data)) {
         console.log("🔥 ข้อมูลจาก Database:", response.data); 
@@ -37,9 +37,7 @@ function DataPage() {
       }
     } catch (error) {
       console.error("ดึงข้อมูลไม่สำเร็จ", error);
-      setCustomers([]); // กันแอปแครชด้วยการเซ็ตเป็น Array ว่าง
-      
-      // 🚨 เด้ง Custom Alert แจ้งเตือนแอดมินว่าเซิร์ฟเวอร์กำลังตื่น!
+      setCustomers([]); 
       setAlertMessage({ 
         show: true, 
         type: 'warning', 
@@ -163,13 +161,29 @@ function DataPage() {
     };
   });
 
+  // 🎯 2. อัปเกรดลอจิกกรองข้อมูล (ทำงานร่วมกันทั้งช่อง Search และ Dropdown Filter)
   const filteredRooms = allRoomsData.filter(item => {
+    // กรองด้วยคำค้นหา (Search)
     const search = searchTerm.toLowerCase();
     return item.room.toLowerCase().includes(search) || 
            item.displayName.toLowerCase().includes(search) || 
            item.displayNationality.toLowerCase().includes(search) ||
            item.displayName2.toLowerCase().includes(search) || 
            item.displayNationality2.toLowerCase().includes(search);
+  }).filter(item => {
+    // กรองด้วย Dropdown Mode
+    if (filterMode === 'occupied') return !item.isEmptyRoom;
+    if (filterMode === 'vacant') return item.isEmptyRoom;
+    if (filterMode === 'ending_soon') return !item.isEmptyRoom; // เอาเฉพาะห้องที่มีคนเช่ามาเรียง
+    return true; // โหมด 'all'
+  }).sort((a, b) => {
+    // จัดเรียงข้อมูลถ้าอยู่ในโหมดใกล้หมดสัญญา (Ending Soon)
+    if (filterMode === 'ending_soon') {
+      const dateA = new Date(a.cust?.lease_end || '9999-12-31');
+      const dateB = new Date(b.cust?.lease_end || '9999-12-31');
+      return dateA - dateB; // เรียงจากวันที่น้อยไปมาก (ใกล้หมดสัญญาขึ้นก่อน)
+    }
+    return 0; // โหมดอื่นๆ ให้เรียงตามปกติ (A1-D2)
   });
 
   return (
@@ -204,18 +218,35 @@ function DataPage() {
             </button>
           </div>
 
-          <div className="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
-            <h2 className="text-xl font-bold text-[#2C3E50]">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
-            <div className="relative w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="Search room, name, nationality..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-80 p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none transition-shadow"
-              />
-              <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <div className="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
+            <h2 className="text-xl font-bold text-[#2C3E50] whitespace-nowrap">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
+            
+            {/* 🎯 3. โซนเครื่องมือค้นหาและฟิลเตอร์ */}
+            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+              
+              <select
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+                className="w-full sm:w-auto p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer bg-gray-50 text-gray-700 font-medium"
+              >
+                <option value="all">All Rooms (ทั้งหมด)</option>
+                <option value="occupied">Occupied (มีผู้เช่า)</option>
+                <option value="vacant">Vacant (ห้องว่าง)</option>
+                <option value="ending_soon">Ending Soon (ใกล้หมดสัญญา)</option>
+              </select>
+
+              <div className="relative w-full sm:w-80">
+                <input
+                  type="text"
+                  placeholder="Search room, name, nationality..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none transition-shadow"
+                />
+                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
             </div>
+
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 items-start">
@@ -249,7 +280,10 @@ function DataPage() {
                         <span className="font-semibold text-blue-700">Lease Start:</span> {data.displayLeaseStart}
                       </div>
                       <div className="col-span-1 sm:col-span-2">
-                        <span className="font-semibold text-red-600">Lease End:</span> {data.displayLeaseEnd}
+                        {/* 🎯 ไฮไลท์สีแดงถ้าเลือกโหมดใกล้หมดสัญญา */}
+                        <span className={`font-semibold ${filterMode === 'ending_soon' ? 'text-red-600 font-extrabold bg-red-100 px-1 rounded' : 'text-red-600'}`}>
+                          Lease End:
+                        </span> {data.displayLeaseEnd}
                       </div>
                     </div>
                   </div>
@@ -287,8 +321,8 @@ function DataPage() {
               ))
             ) : (
               <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-lg shadow-sm">
-                <p className="text-gray-500 text-lg">No results found for "{searchTerm}"</p>
-                <button onClick={() => setSearchTerm('')} className="mt-4 text-[#3498DB] hover:underline">Clear Search</button>
+                <p className="text-gray-500 text-lg">No results found.</p>
+                <button onClick={() => {setSearchTerm(''); setFilterMode('all');}} className="mt-4 text-[#3498DB] hover:underline font-bold">Clear Filters</button>
               </div>
             )}
           </div>
@@ -410,12 +444,11 @@ function DataPage() {
         </div>
       )}
 
-      {/* 🎯 Custom Alert Popup (อัปเกรดเพิ่มแบบ Warning) */}
+      {/* Custom Alert Popup */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
             
-            {/* ไอคอนตามประเภท */}
             {alertMessage.type === 'success' && (
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
@@ -426,7 +459,6 @@ function DataPage() {
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
               </div>
             )}
-            {/* 🎯 ไอคอนสีส้ม สำหรับ Warning / Cold Start */}
             {alertMessage.type === 'warning' && (
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-sm">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>

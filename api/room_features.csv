@@ -1,0 +1,9 @@
+Room_ID,Floor,View_Type,Price
+A1,1,Sunset,12000
+B1,1,Sunrise,13000
+C1,1,No sunlight,11000
+D1,1,No sunlight,11000
+A2,2,Sunset,14000
+B2,2,Sunrise,15000
+C2,2,No sunlight,12000
+D2,2,No sunlight,12000

@@ -293,3 +293,45 @@ class SentimentAnalysisView(APIView):
             'score': compound,
             'is_repair': is_repair
         })
+
+# ==========================================
+# 🌟 โครง API เปล่า (Dummy API) สำหรับระบบแนะนำห้องพัก
+# (อนาคตจะเอา Machine Learning - Scikit Learn มาเสียบแทนที่ตรงนี้)
+# ==========================================
+class RecommendRoomView(APIView):
+    def post(self, request):
+        # 1. รับค่าความต้องการจากหน้าเว็บ (เช่น ลูกค้าชอบวิว Sunset และมีงบไม่เกิน 13000)
+        pref_view = request.data.get('view_preference', '')
+        max_price = request.data.get('max_price', 999999) # ถ้าไม่ส่งงบมา ให้ตั้งไว้เยอะๆ
+
+        # 2. ข้อมูลห้องพักจำลอง (Mock Data ที่เราคุยกันไว้)
+        all_rooms = [
+            {"Room_ID": "A1", "Floor": 1, "View_Type": "Sunset", "Price": 12000},
+            {"Room_ID": "B1", "Floor": 1, "View_Type": "Sunrise", "Price": 13000},
+            {"Room_ID": "C1", "Floor": 1, "View_Type": "No sunlight", "Price": 11000},
+            {"Room_ID": "D1", "Floor": 1, "View_Type": "No sunlight", "Price": 11000},
+            {"Room_ID": "A2", "Floor": 2, "View_Type": "Sunset", "Price": 14000},
+            {"Room_ID": "B2", "Floor": 2, "View_Type": "Sunrise", "Price": 15000},
+            {"Room_ID": "C2", "Floor": 2, "View_Type": "No sunlight", "Price": 12000},
+            {"Room_ID": "D2", "Floor": 2, "View_Type": "No sunlight", "Price": 12000},
+        ]
+
+        # 3. ลอจิกการแนะนำแบบบ้านๆ (Rule-based) กรองเฉพาะห้องที่ตรงสเปค
+        recommended = []
+        for room in all_rooms:
+            # เช็คเรื่องวิว (ถ้าลูกค้าเลือกวิวมา และวิวไม่ตรง ให้ข้ามไป)
+            if pref_view and pref_view.lower() not in room['View_Type'].lower():
+                continue
+            
+            # เช็คเรื่องราคา (ถ้าราคาห้องแพงกว่างบลูกค้า ให้ข้ามไป)
+            if room['Price'] > int(max_price):
+                continue
+                
+            recommended.append(room)
+
+        # 4. ส่งผลลัพธ์กลับไปให้ React
+        return Response({
+            "message": "AI Recommendation (Dummy Mode)",
+            "total_matches": len(recommended),
+            "recommended_rooms": recommended
+        })

@@ -21,6 +21,25 @@ const formatDateTime = (date) => {
   return `${dayName} ${d} ${monthName} ${year} ${hours}:${minutes} ${ampm}`;
 };
 
+// 🎯 ฟังก์ชันคำนวณคำทักทายตามช่วงเวลา
+const getGreeting = (date) => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const timeInMinutes = hours * 60 + minutes;
+
+  const morningStart = 5 * 60; // 05:00
+  const morningEnd = 12 * 60;  // 12:00
+  const afternoonEnd = 18 * 60; // 18:00 (06:00 pm)
+
+  if (timeInMinutes >= morningStart && timeInMinutes <= morningEnd) {
+    return "Good Morning";
+  } else if (timeInMinutes > morningEnd && timeInMinutes <= afternoonEnd) {
+    return "Good Afternoon";
+  } else {
+    return "Good Evening";
+  }
+};
+
 function AdminDashboard() {
   const navigate = useNavigate();
 
@@ -85,9 +104,11 @@ function AdminDashboard() {
       {/* 🔵 พื้นที่รูปภาพและหัวข้อ */}
       <div className="w-full bg-[#EAEAEA] py-6 md:py-8 flex flex-col items-center px-4 sm:px-6">
         
-        {/* 🎯 ส่วนหัวข้อ Home และ วันที่ (จัดให้พอดีกับขอบรูป) */}
+        {/* 🎯 ส่วนหัวข้อคำทักทาย และ วันที่ (จัดให้พอดีกับขอบรูป) */}
         <div className="w-full max-w-4xl mb-3 flex flex-col sm:flex-row sm:items-end justify-between px-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A] tracking-wide leading-none">Home</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A] tracking-wide leading-none">
+            {getGreeting(currentTime)}
+          </h1>
           <p className="text-sm sm:text-base text-gray-500 font-medium mt-1 sm:mt-0 tracking-wide">
             {formatDateTime(currentTime)}
           </p>

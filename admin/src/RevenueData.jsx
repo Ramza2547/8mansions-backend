@@ -90,6 +90,9 @@ function RevenueData() {
   const [isUnsaved, setIsUnsaved] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false); 
 
+  // 🎯 เพิ่ม State สำหรับจัดการ Popup จำลองกราฟ
+  const [showChartModal, setShowChartModal] = useState(false);
+
   const pdfRef = useRef(null);
 
   const ROOM_ORDER = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
@@ -256,6 +259,16 @@ function RevenueData() {
     html2pdf().set(opt).from(element).save();
   };
 
+  // 🎯 ฟังก์ชันจัดการปุ่มกราฟ (ตรวจสอบการ Save Data)
+  const handleViewChart = () => {
+    if (isUnsaved) {
+      alert("กรุณากดปุ่ม Save Data เพื่อบันทึกล่าสุดก่อนสร้างกราฟครับ!");
+      return;
+    }
+    // ถ้าเซฟแล้ว ให้เปิด Modal ตัวโครงร่างกราฟ
+    setShowChartModal(true);
+  };
+
   const isYearlyView = filterMonth.endsWith('-ALL');
   const yearStr = filterMonth.split('-')[0];
 
@@ -270,7 +283,6 @@ function RevenueData() {
       if (!grouped[inv.room]) {
         grouped[inv.room] = { id: inv.room, room: inv.room, roomRentalRemark: '', roomRental: 0, elecBill: 0, waterBill: 0, totalAmount: 0, remark: '-', isPaid: true };
       }
-      // 🎯 ดักทั้งสองรูปแบบเผื่อการทำงานผิดพลาดของ Backend
       const remarkVal = inv.roomRentalRemark || inv.room_rental_remark || '';
       if (remarkVal) grouped[inv.room].roomRentalRemark = remarkVal;
 
@@ -383,7 +395,6 @@ function RevenueData() {
                 <tr><td colSpan="6" className="py-6 text-gray-500 italic border border-black text-sm">No paid invoices available.</td></tr>
               ) : (
                 pdfInvoices.map((inv, idx) => {
-                  // 🎯 ดักทั้งรูปแบบ camelCase และ snake_case เผื่อความชัวร์ของ API หลังบ้าน
                   const currentRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
                   return (
                     <tr key={idx}>
@@ -560,7 +571,6 @@ function RevenueData() {
                   <tr><td colSpan={isYearlyView ? "6" : "8"} className="text-center py-10 text-gray-500 font-medium">No data available for this selection.</td></tr>
                 ) : (
                   displayInvoices.map((inv, index) => {
-                    // 🎯 ดักทั้งรูปแบบ camelCase และ snake_case เผื่อความชัวร์ของ API หลังบ้าน
                     const webRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
                     return (
                       <tr key={inv.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 transition-colors`}>
@@ -752,8 +762,9 @@ function RevenueData() {
 
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10 print:hidden">
-          <button onClick={() => navigate('/data')} className="bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-10 rounded shadow-md transition-transform active:scale-95">
+        {/* 🎯 อัปเดตกลุ่มปุ่มด้านล่าง เพิ่มปุ่ม Chart เข้าไป */}
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10 print:hidden flex-wrap">
+          <button onClick={() => navigate('/data')} className="bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-8 rounded shadow-md transition-transform active:scale-95">
             Back to Data Page
           </button>
           
@@ -761,10 +772,21 @@ function RevenueData() {
             onClick={handleSavePdf} 
             disabled={isUnsaved}
             title={isUnsaved ? "กรุณากด Save Data ก่อนพิมพ์เอกสาร" : "Save PDF / Print"}
-            className={`${isUnsaved ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-[#2ECC71] hover:bg-[#27AE60] active:scale-95'} text-white font-bold py-3 px-10 rounded shadow-md transition-all duration-300 flex items-center justify-center gap-2`}
+            className={`${isUnsaved ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-[#2ECC71] hover:bg-[#27AE60] active:scale-95'} text-white font-bold py-3 px-8 rounded shadow-md transition-all duration-300 flex items-center justify-center gap-2`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Save PDF / Print
+          </button>
+
+          {/* 🎯 ปุ่ม View Chart (ใหม่) */}
+          <button 
+            onClick={handleViewChart} 
+            disabled={isUnsaved}
+            title={isUnsaved ? "กรุณากด Save Data ก่อนสร้างกราฟ" : "View Revenue Chart"}
+            className={`${isUnsaved ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-[#9B59B6] hover:bg-[#8E44AD] active:scale-95'} text-white font-bold py-3 px-8 rounded shadow-md transition-all duration-300 flex items-center justify-center gap-2`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            View Chart (Beta)
           </button>
         </div>
 
@@ -792,6 +814,30 @@ function RevenueData() {
                 Yes, Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 Popup จำลองระบบกราฟ (Chart Mockup Modal) */}
+      {showChartModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100] px-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-lg w-full text-center transform scale-100 transition-all duration-300">
+            <div className="w-16 h-16 rounded-full bg-purple-100 text-[#9B59B6] flex items-center justify-center mx-auto mb-4 border-4 border-purple-50">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+            </div>
+            <h3 className="text-2xl font-extrabold text-gray-900 mb-2">Revenue Chart</h3>
+            <p className="text-gray-500 mb-6 text-sm px-4">ระบบกราฟสรุปรายได้ (Data Visualization) จะพร้อมใช้งานในเร็วๆ นี้ตามแผนการพัฒนาเฟสถัดไปครับ!</p>
+            
+            <div className="w-full h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center mb-6">
+              <span className="text-gray-400 font-bold tracking-widest text-sm">[ CHART PLACEHOLDER ]</span>
+            </div>
+            
+            <button 
+              onClick={() => setShowChartModal(false)} 
+              className="w-full px-4 py-3 bg-[#9B59B6] text-white font-bold rounded-xl hover:bg-[#8E44AD] transition-colors shadow-md"
+            >
+              Got it!
+            </button>
           </div>
         </div>
       )}

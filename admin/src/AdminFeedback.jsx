@@ -5,7 +5,11 @@ import axios from 'axios';
 function AdminFeedback() {
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
+  
   const [filterMonth, setFilterMonth] = useState(''); 
+  // 🎯 State สำหรับกรอง Status ทุกประเภท
+  const [filterStatus, setFilterStatus] = useState(''); 
+  
   const [cardStatuses, setCardStatuses] = useState({}); 
 
   useEffect(() => { fetchFeedbacks(); }, []);
@@ -45,7 +49,7 @@ function AdminFeedback() {
 
   const generateMonthOptions = () => {
     const options = [];
-    let current = new Date(2021, 0);
+    let current = new Date(2026, 0); // เริ่มที่ มกราคม 2026
     const currentDate = new Date();
     while (current <= currentDate) {
       options.push({ value: `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`, label: `${current.toLocaleString('en-US', { month: 'short' })} ${current.getFullYear()}` });
@@ -54,10 +58,27 @@ function AdminFeedback() {
     return options.reverse(); 
   };
 
+  // 🎯 ลอจิกการกรอง ให้เช็คทั้งเดือนและสถานะ 4 ประเภท
   const filteredFeedbacks = feedbacks.filter(fb => {
-    if (!filterMonth) return true; 
-    const fbDate = new Date(fb.created_at);
-    return `${fbDate.getFullYear()}-${String(fbDate.getMonth() + 1).padStart(2, '0')}` === filterMonth;
+    let monthMatch = true;
+    if (filterMonth) {
+      const fbDate = new Date(fb.created_at);
+      monthMatch = `${fbDate.getFullYear()}-${String(fbDate.getMonth() + 1).padStart(2, '0')}` === filterMonth;
+    }
+
+    let statusMatch = true;
+    if (filterStatus) {
+      const statusObj = cardStatuses[fb.id];
+      if (!statusObj) {
+        // ถ้าระบบยังประมวลผล Status ไม่เสร็จ จะซ่อนไปก่อน
+        statusMatch = false; 
+      } else {
+        // เช็คให้ตรงกับ Status ที่เลือก (POSITIVE, NEGATIVE, REPAIR, NEUTRAL)
+        statusMatch = statusObj.label === filterStatus;
+      }
+    }
+
+    return monthMatch && statusMatch;
   });
 
   return (
@@ -80,15 +101,36 @@ function AdminFeedback() {
       </nav>
 
       <div className="flex-1 p-4 sm:p-8 md:p-12 max-w-6xl mx-auto w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A]">Feedback Center</h1>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-gray-300 w-full sm:w-auto">
-            <label className="font-bold text-gray-700 text-sm sm:text-base">Filter by Month:</label>
-            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="p-2 border border-gray-300 rounded outline-none cursor-pointer bg-white text-gray-800 font-medium flex-1 sm:flex-none min-w-[140px] text-sm sm:text-base">
-              <option value="">-- All Months --</option>
-              {generateMonthOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-            {filterMonth && <button onClick={() => setFilterMonth('')} className="text-sm text-red-500 font-bold ml-2">Clear</button>}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A] whitespace-nowrap">Feedback Center</h1>
+          
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-gray-300 w-full md:w-auto">
+            
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <label className="font-bold text-gray-700 text-sm sm:text-base hidden sm:block">Month:</label>
+              <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="p-2 border border-gray-300 rounded outline-none cursor-pointer bg-white text-gray-800 font-medium w-full sm:w-auto min-w-[130px] text-sm sm:text-base">
+                <option value="">-- All Months --</option>
+                {generateMonthOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+
+            {/* 🎯 ตัวกรองสถานะ 4 ประเภท */}
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <label className="font-bold text-gray-700 text-sm sm:text-base hidden sm:block ml-1">Status:</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="p-2 border border-gray-300 rounded outline-none cursor-pointer bg-white text-gray-800 font-medium w-full sm:w-auto min-w-[130px] text-sm sm:text-base">
+                <option value="">-- All Types --</option>
+                <option value="POSITIVE">Positive</option>
+                <option value="NEGATIVE">Negative</option>
+                <option value="REPAIR">Repair</option>
+                <option value="NEUTRAL">Neutral</option>
+              </select>
+            </div>
+
+            {(filterMonth || filterStatus) && (
+              <button onClick={() => { setFilterMonth(''); setFilterStatus(''); }} className="text-sm text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded transition-colors">
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
@@ -98,7 +140,7 @@ function AdminFeedback() {
 
         {filteredFeedbacks.length === 0 ? (
           <div className="text-center py-16 sm:py-20 bg-white rounded-xl shadow-sm border border-dashed border-gray-400 mx-2 sm:mx-0">
-            <p className="text-gray-400 text-base sm:text-lg">No feedback available for this month.</p>
+            <p className="text-gray-400 text-base sm:text-lg">No feedback available for this filter.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -122,12 +164,11 @@ function AdminFeedback() {
         )}
 
         <div className="flex justify-center mt-8 sm:mt-12">
-          {/* 🎯 เปลี่ยนปุ่ม Dashboard ให้ย้ายไปหน้ากราฟ */}
           <button 
             onClick={() => navigate('/admin/feedback/dashboard')}
-            disabled={filteredFeedbacks.length === 0}
+            disabled={feedbacks.length === 0}
             className={`w-full sm:w-auto py-3 px-16 rounded font-bold transition-all shadow-md 
-              ${filteredFeedbacks.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-400' : 'bg-[#1A1A1A] hover:bg-gray-800 text-white active:scale-95'}`}
+              ${feedbacks.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-400' : 'bg-[#1A1A1A] hover:bg-gray-800 text-white active:scale-95'}`}
           >
             Dashboard
           </button>

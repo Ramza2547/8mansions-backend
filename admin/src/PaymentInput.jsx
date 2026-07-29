@@ -14,6 +14,9 @@ function PaymentInput() {
     hasOther: false, otherDetail: '', otherAmount: ''
   });
 
+  // 🎯 เพิ่ม State สำหรับแจ้งเตือน (Custom Alert)
+  const [alertData, setAlertData] = useState({ show: false, type: '', text: '' });
+
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
   useEffect(() => {
@@ -38,6 +41,8 @@ function PaymentInput() {
         }
       } catch (error) { 
         console.error("ดึงข้อมูลไม่สำเร็จ", error); 
+        // 🎯 ดักจับ Error ตอนดึงข้อมูล
+        setAlertData({ show: true, type: 'error', text: 'ไม่สามารถโหลดข้อมูลห้องได้ กรุณาลองใหม่อีกครั้ง' });
       }
     };
     fetchCustomers();
@@ -74,28 +79,38 @@ function PaymentInput() {
   const disableRoomRental = isWithholding; 
   const disableUtils = isWithholding || isDeposit; 
 
+  // 🎯 เปลี่ยนลอจิกการแจ้งเตือนจาก alert() มาเรียก setAlertData แทน
   const handleNext = () => {
-    if (!formData.room) return alert('กรุณาเลือกห้องพัก');
-    if (!formData.dueDate) return alert('กรุณาระบุวันครบกำหนดชำระ (Due Date)');
+    if (!formData.room) return setAlertData({ show: true, type: 'warning', text: 'กรุณาเลือกห้องพัก' });
+    if (!formData.dueDate) return setAlertData({ show: true, type: 'warning', text: 'กรุณาระบุวันครบกำหนดชำระ (Due Date)' });
+    
     if (formData.hasOther) {
-      if (!formData.otherDetail) return alert('กรุณาเลือกรายละเอียดในช่อง Other');
-      if (!formData.otherAmount) return alert('กรุณากรอกจำนวนเงินในช่อง Other');
+      if (!formData.otherDetail) return setAlertData({ show: true, type: 'warning', text: 'กรุณาเลือกรายละเอียดในช่อง Other' });
+      if (!formData.otherAmount) return setAlertData({ show: true, type: 'warning', text: 'กรุณากรอกจำนวนเงินในช่อง Other' });
     }
+    
     // ดักจับกรณีผู้ใช้ไม่ได้กรอกอะไรเลยใน Room Rental
     if (!disableRoomRental && (formData.roomRental === '' || formData.roomRental === undefined)) {
-      return alert('กรุณากรอกยอดเงินในช่อง Room Rental (หากไม่มีให้ใส่ -)');
+      return setAlertData({ show: true, type: 'warning', text: 'กรุณากรอกยอดเงินในช่อง Room Rental (หากไม่มีให้ใส่ -)' });
     }
+    
     if (!disableUtils) {
-      if (!formData.oldElectric || !formData.newElectric || !formData.oldWater || !formData.newWater) 
-        return alert('กรุณากรอกมิเตอร์ให้ครบทุกช่อง');
-      if (Number(formData.newElectric) < Number(formData.oldElectric)) return alert('มิเตอร์ไฟใหม่ ต้องมากกว่าหรือเท่ากับมิเตอร์เก่าครับ!');
-      if (Number(formData.newWater) < Number(formData.oldWater)) return alert('มิเตอร์น้ำใหม่ ต้องมากกว่าหรือเท่ากับมิเตอร์เก่าครับ!');
+      if (!formData.oldElectric || !formData.newElectric || !formData.oldWater || !formData.newWater) {
+        return setAlertData({ show: true, type: 'warning', text: 'กรุณากรอกมิเตอร์ให้ครบทุกช่อง' });
+      }
+      if (Number(formData.newElectric) < Number(formData.oldElectric)) {
+        return setAlertData({ show: true, type: 'warning', text: 'มิเตอร์ไฟใหม่ ต้องมากกว่าหรือเท่ากับมิเตอร์เก่าครับ!' });
+      }
+      if (Number(formData.newWater) < Number(formData.oldWater)) {
+        return setAlertData({ show: true, type: 'warning', text: 'มิเตอร์น้ำใหม่ ต้องมากกว่าหรือเท่ากับมิเตอร์เก่าครับ!' });
+      }
     }
+    
     navigate('/admin/payment/review', { state: formData });
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans">
+    <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans relative">
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
@@ -237,6 +252,45 @@ function PaymentInput() {
           </div>
         </div>
       </div>
+
+      {/* 🎯 ส่วนของ Custom Alert Popup */}
+      {alertData.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
+            
+            {alertData.type === 'error' && (
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm border-4 border-red-50">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </div>
+            )}
+            {alertData.type === 'warning' && (
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-sm border-4 border-yellow-50">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+            )}
+            
+            <h3 className={`text-xl font-extrabold mb-2 
+              ${alertData.type === 'error' ? 'text-red-700' : ''}
+              ${alertData.type === 'warning' ? 'text-yellow-600' : ''}
+            `}>
+              {alertData.type === 'error' && 'เกิดข้อผิดพลาด!'}
+              {alertData.type === 'warning' && 'แจ้งเตือน'}
+            </h3>
+            
+            <p className="text-gray-600 mb-6 font-medium">{alertData.text}</p>
+            
+            <button
+              onClick={() => setAlertData({ show: false, type: '', text: '' })}
+              className={`px-8 py-3 font-bold text-white rounded-xl transition-transform active:scale-95 w-full shadow-md 
+                ${alertData.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : ''}
+                ${alertData.type === 'warning' ? 'bg-[#F39C12] hover:bg-[#D68910]' : ''}
+              `}
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

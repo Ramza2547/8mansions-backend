@@ -5,7 +5,6 @@ from .serializers import CustomerSerializer
 from .models import Feedback
 from .serializers import FeedbackSerializer
 from rest_framework import viewsets
-from rest_framework import viewsets
 from .models import Invoice, UtilityCost
 from .serializers import InvoiceSerializer, UtilityCostSerializer
 import cv2
@@ -14,11 +13,11 @@ import numpy as np
 import re
 from datetime import datetime
 from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
 import os
+import joblib # 🎯 นำเข้า joblib สำหรับโหลดโมเดล Machine Learning
 
 # ==========================================
 # 1. ฟังก์ชันสำหรับระบบ Login (ฝังโค้ดสายลับไว้แล้ว)
@@ -294,17 +293,33 @@ class SentimentAnalysisView(APIView):
             'is_repair': is_repair
         })
 
+
 # ==========================================
-# 🌟 โครง API เปล่า (Dummy API) สำหรับระบบแนะนำห้องพัก
-# (อนาคตจะเอา Machine Learning - Scikit Learn มาเสียบแทนที่ตรงนี้)
+# 🌟 ระบบโหลดโมเดล Machine Learning (Scikit-Learn)
+# ==========================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_floor_path = os.path.join(BASE_DIR, 'ml_model_floor.pkl')
+model_view_path = os.path.join(BASE_DIR, 'ml_model_view.pkl')
+
+try:
+    ml_model_floor = joblib.load(model_floor_path)
+    ml_model_view = joblib.load(model_view_path)
+    print("✅ ML Models loaded successfully!")
+except Exception as e:
+    print(f"⚠️ Warning: Could not load ML models. Error: {e}")
+    ml_model_floor, ml_model_view = None, None
+
+# ==========================================
+# 🌟 API แนะนำห้องพักด้วย AI (Machine Learning Mode)
 # ==========================================
 class RecommendRoomView(APIView):
     def post(self, request):
-        # 1. รับค่าความต้องการจากหน้าเว็บ (เช่น ลูกค้าชอบวิว Sunset และมีงบไม่เกิน 13000)
-        pref_view = request.data.get('view_preference', '')
-        max_price = request.data.get('max_price', 999999) # ถ้าไม่ส่งงบมา ให้ตั้งไว้เยอะๆ
+        # 1. รับข้อมูล Profile ลูกค้าจาก Frontend
+        age = int(request.data.get('age', 25))
+        gender = int(request.data.get('gender', 0)) # 0=ชาย, 1=หญิง
+        budget = int(request.data.get('budget', 15000))
 
-        # 2. ข้อมูลห้องพักจำลอง (Mock Data ที่เราคุยกันไว้)
+        # 2. ข้อมูลห้องพักจำลองทั้ง 8 ห้อง
         all_rooms = [
             {"Room_ID": "A1", "Floor": 1, "View_Type": "Sunset", "Price": 12000},
             {"Room_ID": "B1", "Floor": 1, "View_Type": "Sunrise", "Price": 13000},
@@ -316,22 +331,46 @@ class RecommendRoomView(APIView):
             {"Room_ID": "D2", "Floor": 2, "View_Type": "No sunlight", "Price": 12000},
         ]
 
-        # 3. ลอจิกการแนะนำแบบบ้านๆ (Rule-based) กรองเฉพาะห้องที่ตรงสเปค
+        # 3. ให้ AI เดาใจลูกค้า! (Predict)
+        if ml_model_floor and ml_model_view:
+            predicted_floor = ml_model_floor.predict([[age, gender, budget]])[0]
+            predicted_view = ml_model_view.predict([[age, gender, budget]])[0]
+        else:
+            # ถ้าโหลดโมเดลไม่สำเร็จ ให้ค่า Default
+            predicted_floor = 1
+            predicted_view = "Sunrise"
+
+        # 4. ให้คะแนนความเหมาะสม (Scoring System)
         recommended = []
         for room in all_rooms:
-            # เช็คเรื่องวิว (ถ้าลูกค้าเลือกวิวมา และวิวไม่ตรง ให้ข้ามไป)
-            if pref_view and pref_view.lower() not in room['View_Type'].lower():
-                continue
+            score = 0
             
-            # เช็คเรื่องราคา (ถ้าราคาห้องแพงกว่างบลูกค้า ให้ข้ามไป)
-            if room['Price'] > int(max_price):
+            # ถ้าราคาเกินงบ ตัดทิ้งเลย (ให้คะแนนติดลบ หรือ ข้ามไป)
+            if room['Price'] > budget:
                 continue
                 
+            # ให้คะแนน 50 แต้ม ถ้าชั้นตรงใจ AI
+            if room['Floor'] == predicted_floor:
+                score += 50
+                
+            # ให้คะแนน 50 แต้ม ถ้าวิวตรงใจ AI
+            if room['View_Type'] == predicted_view:
+                score += 50
+                
+            # ให้คะแนนโบนัสถ้าราคาถูกกว่างบ (ความคุ้มค่า) 
+            # หาร 1000 เพื่อให้ตัวเลขคะแนนไม่เวอร์เกินไป
+            score += (budget - room['Price']) / 1000 
+            
+            room['Matching_Score'] = round(score, 2)
             recommended.append(room)
 
-        # 4. ส่งผลลัพธ์กลับไปให้ React
+        # 5. จัดเรียงห้องที่ได้คะแนนสูงสุดขึ้นก่อน (Sort)
+        recommended = sorted(recommended, key=lambda x: x['Matching_Score'], reverse=True)
+
         return Response({
-            "message": "AI Recommendation (Dummy Mode)",
+            "message": "AI Smart Recommendation via Scikit-Learn",
+            "user_profile": {"age": age, "gender": gender, "budget": budget},
+            "ai_prediction": {"preferred_floor": int(predicted_floor), "preferred_view": predicted_view},
             "total_matches": len(recommended),
             "recommended_rooms": recommended
         })

@@ -121,12 +121,18 @@ function GuestForm() {
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Date of Birth (วันเกิด)</label>
                   <div className="w-full">
-                    {/* 🎯 ถอด Dropdown ออกเพื่อให้หน้าตาคลีนเหมือนภาพ 100% */}
+                    {/* 🎯 เปิดใช้งาน Dropdown เลือกเดือน/ปี สำหรับ Tenant 1 */}
                     <DatePicker 
                       selected={parseDMYToDate(formData.date_of_birth)} 
                       onChange={(date) => handleDobChange(date, false)} 
                       dateFormat="dd/MM/yyyy"
                       placeholderText="DD/MM/YYYY"
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                      yearDropdownItemNumber={100}
+                      scrollableYearDropdown
+                      maxDate={new Date()}
                       className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#8FAFC1] bg-white cursor-pointer"
                       wrapperClassName="w-full"
                     />
@@ -155,12 +161,18 @@ function GuestForm() {
                   <div>
                     <label className="block text-gray-700 font-bold mb-1 text-xs sm:text-sm">Date of Birth (วันเกิด)</label>
                     <div className="w-full">
-                      {/* 🎯 ถอด Dropdown ออก */}
+                      {/* 🎯 เปิดใช้งาน Dropdown เลือกเดือน/ปี สำหรับ Tenant 2 */}
                       <DatePicker 
                         selected={parseDMYToDate(formData.date_of_birth_2)} 
                         onChange={(date) => handleDobChange(date, true)} 
                         dateFormat="dd/MM/yyyy"
                         placeholderText="DD/MM/YYYY"
+                        showMonthDropdown
+                        showYearDropdown
+                        dropdownMode="select"
+                        yearDropdownItemNumber={100}
+                        scrollableYearDropdown
+                        maxDate={new Date()}
                         className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-green-400 bg-white cursor-pointer"
                         wrapperClassName="w-full"
                       />

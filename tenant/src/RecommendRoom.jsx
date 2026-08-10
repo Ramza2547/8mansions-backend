@@ -166,12 +166,16 @@ function RecommendRoom() {
             </div>
           </form>
         </div>
-
-        {hasSearched && aiPrediction && (
+{hasSearched && aiPrediction && (
           <div className="w-full max-w-5xl mb-6 p-4 bg-[#8FAFC1] bg-opacity-20 border border-[#8FAFC1] rounded-lg flex items-center justify-between animate-fade-in">
             <div>
               <span className="font-bold text-[#1A1A1A]">🧠 AI Prediction:</span>
-              <span className="ml-2 text-gray-700">โมเดลวิเคราะห์ว่าคุณน่าจะชอบห้อง <b>ชั้น {aiPrediction.preferred_floor}</b> และวิวแบบ <b>{aiPrediction.preferred_view}</b></span>
+              <span className="ml-2 text-gray-700">
+                The model predicts you might like <b>Floor {aiPrediction.preferred_floor}</b> with a <b>{aiPrediction.preferred_view}</b> view. 
+                <span className="text-gray-500 text-sm ml-2">
+                  (โมเดลวิเคราะห์ว่าคุณน่าจะชอบห้อง <b>ชั้น {aiPrediction.preferred_floor}</b> และวิวแบบ <b>{aiPrediction.preferred_view}</b>)
+                </span>
+              </span>
             </div>
           </div>
         )}

@@ -331,66 +331,64 @@ class RecommendRoomView(APIView):
             {"Room_ID": "D2", "Floor": 2, "View_Type": "No sunlight", "Price": 12000},
         ]
 
-        # 🎯 1. ระบบกรองห้องที่ไม่ว่าง (แก้บั๊กชื่อห้องไม่ตรงกัน)
+        # 🎯 1. ระบบกรองห้องที่ไม่ว่าง
         active_customers = Customer.objects.filter(is_active=True)
         occupied_rooms = []
         for customer in active_customers:
-            # ดึงค่าฟิลด์ห้องมา แล้วแปลงเป็น String (เผื่อเป็น ForeignKey)
             room_val = str(getattr(customer, 'room_number', getattr(customer, 'room', '')))
-            # ลบคำว่า Room ออก (ถ้ามี) ให้เหลือแต่รหัส เช่น 'A1'
             room_val = room_val.replace('Room', '').strip()
-            
             if room_val:
                 occupied_rooms.append(room_val)
 
-        # คัดเฉพาะห้องที่ "ว่าง" เท่านั้น
         available_rooms = [r for r in all_rooms if r['Room_ID'] not in occupied_rooms]
 
-        # พยากรณ์ด้วย 5 ตัวแปร
+        # 🎯 2. ให้ AI พยากรณ์ (พร้อมระบบดัก Error)
+        predicted_floor = 1
+        predicted_view = "Sunrise"
+        
         if ml_model_floor and ml_model_view:
-            predicted_floor = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
-            predicted_view = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
-        else:
-            predicted_floor = 1
-            predicted_view = "Sunrise"
+            try:
+                # ลองพยากรณ์ด้วย 5 ตัวแปร
+                predicted_floor = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
+                predicted_view = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
+            except Exception as e:
+                print(f"⚠️ AI Prediction Error (Fallback to default): {e}")
+                try:
+                    # ถ้าเจอโมเดลเก่ารับได้แค่ 3 ตัวแปร ก็ให้ลองส่งแค่ 3 ตัวแปร
+                    predicted_floor = ml_model_floor.predict([[age, gender, budget]])[0]
+                    predicted_view = ml_model_view.predict([[age, gender, budget]])[0]
+                except:
+                    pass
 
+        # 🎯 3. คำนวณคะแนน
         recommended = []
         for room in available_rooms:
-            # ถ้าราคาเกินงบ ตัดทิ้ง!
             if room['Price'] > budget:
                 continue
             
-            # 🎯 2. ปรับสมการคะแนน (รวมแล้วไม่มีทางเกิน 100)
             base_score = 0
             if room['Floor'] == predicted_floor: base_score += 40
             if room['View_Type'] == predicted_view: base_score += 40
             
-            # ยิ่งราคาถูกกว่างบ ยิ่งได้คะแนนบวกเพิ่ม (สูงสุด 20 แต้ม)
             price_diff = budget - room['Price']
             price_bonus = min(20, (price_diff / budget) * 20) if price_diff > 0 else 0
             
             room['raw_score'] = base_score + price_bonus
             recommended.append(room)
 
-        # เรียงคะแนนดิบจากมากไปน้อย (ถ้าระแนนเท่ากัน เอาราคาถูกกว่าขึ้นก่อน)
         recommended = sorted(recommended, key=lambda x: (x['raw_score'], -x['Price']), reverse=True)
 
-        # 🎯 3. ลอจิกป้องกันคะแนนซ้ำ และห้ามเกิน 100 เด็ดขาด
+        # 🎯 4. ลอจิกป้องกันคะแนนซ้ำ และห้ามเกิน 100
         for i, room in enumerate(recommended):
-            # ปัดเศษทศนิยมทิ้ง และบล็อคเพดานไว้ที่ 100
             int_score = int(min(100, room['raw_score'])) 
-            
             if i == 0:
-                # ห้องที่ได้อันดับ 1 ให้คะแนนสวยๆ
                 final_score = int_score if int_score >= 90 else 95
             else:
-                # ห้องอันดับรองลงมา "ต้องมีคะแนนน้อยกว่าห้องก่อนหน้า 1 แต้มเสมอ" (ป้องกันเลขซ้ำ)
                 prev_score = recommended[i-1]['Matching_Score']
                 final_score = min(int_score, prev_score - 1)
             
-            # กันเหนียวไม่ให้คะแนนร่วงไปติดลบ
             room['Matching_Score'] = max(1, final_score) 
-            del room['raw_score'] # ลบคะแนนดิบออกก่อนส่งให้ React
+            del room['raw_score'] 
 
         return Response({
             "message": "AI Recommendation via Random Forest",

@@ -5,11 +5,13 @@ import { useState } from 'react';
 function BookingConfirm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { formData, hasSecondTenant, room } = location.state || {};
+  
+  // 🎯 รับค่า roomDetails จากหน้า RecommendRoom ให้ชื่อตรงกัน
+  const { formData, hasSecondTenant, roomDetails } = location.state || {};
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🎯 State สำหรับ Custom Alert Popup
+  // State สำหรับ Custom Alert Popup
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '' });
 
   const formatDateDisplay = (dateStr) => {
@@ -28,11 +30,12 @@ function BookingConfirm() {
 
     const dataToSubmit = { 
       ...formData, 
-      room: room,
-      date_of_birth: convertToDbDate(formData.date_of_birth),
-      date_of_birth_2: convertToDbDate(formData.date_of_birth_2),
-      lease_start: convertToDbDate(formData.lease_start),
-      lease_end: convertToDbDate(formData.lease_end),
+      // 🎯 ดึงเฉพาะ Room_ID ส่งไปให้ Database
+      room: roomDetails?.Room_ID || '', 
+      date_of_birth: convertToDbDate(formData?.date_of_birth),
+      date_of_birth_2: convertToDbDate(formData?.date_of_birth_2),
+      lease_start: convertToDbDate(formData?.lease_start),
+      lease_end: convertToDbDate(formData?.lease_end),
     };
 
     if (!hasSecondTenant) {
@@ -46,7 +49,6 @@ function BookingConfirm() {
       navigate('/booking-success'); 
     } catch (error) {
       console.error('Error syncing data:', error);
-      // 🎯 เปลี่ยนจากการใช้ window.alert เป็น Custom Popup
       setAlertMessage({ 
         show: true, 
         type: 'error', 
@@ -60,7 +62,7 @@ function BookingConfirm() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans relative">
       
-      {/* 🎯 Custom Alert Popup */}
+      {/* Custom Alert Popup */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center">
@@ -90,9 +92,8 @@ function BookingConfirm() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center p-4">
-        {/* 🎯 ปรับ Responsive Container */}
         <div className="bg-white p-6 sm:p-10 rounded-xl shadow-xl w-full max-w-lg my-6 animate-fade-in-up">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-[#1A1A1A]">Booking Room</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-[#1A1A1A]">Booking Summary</h2>
           
           <div className="flex flex-col gap-4 text-sm sm:text-lg bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-100">
             <div className="flex flex-col border-b pb-2">
@@ -125,13 +126,19 @@ function BookingConfirm() {
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-orange-50 border border-orange-100 p-3 rounded-lg mt-2">
-              <span className="font-bold text-orange-800 text-sm sm:text-base">Selected Room:</span>
-              <span className="font-extrabold text-xl sm:text-2xl text-orange-600">Room {room}</span>
+            {/* 🎯 แสดงรายละเอียดห้องพักที่ถูกส่งมาจากหน้า RecommendRoom */}
+            <div className="flex flex-col gap-2 bg-orange-50 border border-orange-100 p-4 rounded-lg mt-2">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-orange-800 text-sm sm:text-base">Selected Room:</span>
+                <span className="font-extrabold text-xl sm:text-2xl text-orange-600">Room {roomDetails?.Room_ID || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs sm:text-sm text-orange-700 mt-1">
+                <span>Floor: <b>{roomDetails?.Floor || '-'}</b></span>
+                <span>Price: <b>{roomDetails?.Price ? roomDetails.Price.toLocaleString() : '-'} THB / Month</b></span>
+              </div>
             </div>
           </div>
 
-          {/* 🎯 จัดปุ่มให้ Responsive บนจอมือถือเล็กๆ */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 mt-6 sm:mt-8">
             <button onClick={() => navigate(-1)} disabled={isSubmitting}
               className="w-full sm:flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow text-center active:scale-95 transition-all disabled:bg-gray-400">

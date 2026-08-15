@@ -14,9 +14,8 @@ function UploadDocument() {
 
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '', navToForm: false });
 
-  const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000'
-    : 'https://eightmansions-backend-1.onrender.com';
+  // 🎯 แก้ไข: บังคับให้ยิงไปที่ Render เสมอ ไม่ว่าจะรันผ่าน Local หรือบนเว็บจริง
+  const API_BASE_URL = 'https://eightmansions-backend-1.onrender.com';
 
   const handleUpload = async () => {
     if (!file1) {
@@ -74,18 +73,16 @@ function UploadDocument() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans relative">
       
-      {/* 🎯 อัปเกรดหน้า Loading: เพิ่ม Spinner วงล้อหมุน และฉากหลังกึ่งโปร่งแสงเบลอๆ */}
       {isLoading && (
         <div className="fixed inset-0 bg-[#F0F0F0]/90 backdrop-blur-sm z-[100] flex flex-col justify-center items-center p-4 text-center transition-all">
           <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-black rounded-full animate-spin mb-6 shadow-lg"></div>
           <div className="animate-pulse flex flex-col items-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Reduce blurring</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Reading document</h1>
             <h2 className="text-xl sm:text-2xl font-medium text-gray-600">Please wait...</h2>
           </div>
         </div>
       )}
 
-      {/* 🎯 Custom Popup (ถ้าอันนี้เด้ง แสดงว่าโค้ดใหม่ทำงาน 100%) */}
       {alertMessage.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center">

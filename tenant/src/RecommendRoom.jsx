@@ -14,29 +14,40 @@ function RecommendRoom() {
 
   const getInitialData = () => {
     let initialBirthDate = null;
+    let initialBirthDate2 = null;
     let initialAge = '';
+    let initialAge2 = '';
+
+    const currentYear = new Date().getFullYear();
 
     if (guestFormData && guestFormData.date_of_birth) {
       const [d, m, y] = guestFormData.date_of_birth.split('/');
       initialBirthDate = new Date(y, m - 1, d);
-      
-      const currentYear = new Date().getFullYear();
-      const birthYear = parseInt(y, 10);
-      initialAge = currentYear - birthYear;
+      initialAge = currentYear - parseInt(y, 10);
     }
-    return { initialBirthDate, initialAge };
+    
+    if (guestFormData && guestFormData.date_of_birth_2) {
+      const [d2, m2, y2] = guestFormData.date_of_birth_2.split('/');
+      initialBirthDate2 = new Date(y2, m2 - 1, d2);
+      initialAge2 = currentYear - parseInt(y2, 10);
+    }
+
+    return { initialBirthDate, initialBirthDate2, initialAge, initialAge2 };
   };
 
-  const { initialBirthDate, initialAge } = getInitialData();
+  const { initialBirthDate, initialBirthDate2, initialAge, initialAge2 } = getInitialData();
 
   const [birthDate, setBirthDate] = useState(initialBirthDate);
-  // 🎯 เพิ่ม occupants และ duration เป็นตัวกรอง
+  const [birthDate2, setBirthDate2] = useState(initialBirthDate2); // 🎯 เพิ่ม State วันเกิดคนที่ 2
+  
   const [formData, setFormData] = useState({ 
     age: initialAge, 
     gender: 0, 
     budget: 15000,
     occupants: hasSecondTenant ? 2 : 1,
-    duration: parseInt(leaseDuration)
+    duration: parseInt(leaseDuration),
+    age2: initialAge2,
+    gender2: 1 
   });
   
   const [rooms, setRooms] = useState([]);
@@ -52,6 +63,18 @@ function RecommendRoom() {
       setFormData({ ...formData, age: calculatedAge });
     } else {
       setFormData({ ...formData, age: '' });
+    }
+  };
+
+  // 🎯 เพิ่มฟังก์ชันจัดการปฏิทินคนที่ 2
+  const handleDateChange2 = (date) => {
+    setBirthDate2(date);
+    if (date) {
+      const currentYear = new Date().getFullYear();
+      const calculatedAge = currentYear - date.getFullYear();
+      setFormData({ ...formData, age2: calculatedAge });
+    } else {
+      setFormData({ ...formData, age2: '' });
     }
   };
 
@@ -78,8 +101,9 @@ function RecommendRoom() {
   };
 
   const clearFilters = () => {
-    setFormData({ age: '', gender: 0, budget: 15000, occupants: 1, duration: 12 });
+    setFormData({ age: '', gender: 0, budget: 15000, occupants: 1, duration: 12, age2: '', gender2: 1 });
     setBirthDate(null);
+    setBirthDate2(null);
     setRooms([]);
     setAiPrediction(null);
     setHasSearched(false);
@@ -90,7 +114,7 @@ function RecommendRoom() {
       state: {
         formData: guestFormData,
         duration: leaseDuration,
-        hasSecondTenant: hasSecondTenant,
+        hasSecondTenant: formData.occupants === 2, // 🎯 อัปเดตตามที่กดในหน้า AI
         roomDetails: selectedRoom
       }
     });
@@ -113,72 +137,108 @@ function RecommendRoom() {
 
       <div className="flex-1 p-4 sm:p-8 flex flex-col items-center">
         <div className="text-center mb-8">
-          {/* 🎯 ถอดคำว่า Smart ออก เหลือแค่นี้ครับ */}
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A]">Room Recommendation</h1>
           <p className="text-gray-600 mt-2">ให้ระบบ AI วิเคราะห์และแนะนำห้องพักที่เหมาะสมกับคุณ</p>
         </div>
 
-        {/* 🎯 ปรับให้กว้างขึ้น เพื่อวางตัวกรอง 5 ช่องให้พอดี */}
         <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-6xl mb-8">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 items-end">
+          <form onSubmit={handleSearch} className="flex flex-col gap-4">
             
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Date of Birth</label>
-              <DatePicker selected={birthDate} onChange={handleDateChange} dateFormat="dd/MM/yyyy" placeholderText="วันเกิด" showMonthDropdown showYearDropdown dropdownMode="select" yearDropdownItemNumber={100} scrollableYearDropdown maxDate={new Date()} className="w-full p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm" wrapperClassName="w-full"/>
+            {/* 🎯 แถวแรก: Tenant 1 และ ข้อมูลห้องที่ใช้ร่วมกัน */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              
+              <div className="w-full sm:w-1/6">
+                <label className="block text-[#1A1A1A] font-bold mb-2 text-xs">Tenant 1 DOB</label>
+                <DatePicker selected={birthDate} onChange={handleDateChange} dateFormat="dd/MM/yyyy" placeholderText="วันเกิด" showMonthDropdown showYearDropdown dropdownMode="select" yearDropdownItemNumber={100} scrollableYearDropdown maxDate={new Date()} className="w-full p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm" wrapperClassName="w-full"/>
+              </div>
+
+              <div className="w-full sm:w-1/6">
+                <label className="block text-gray-700 font-bold mb-2 text-xs">Age (อายุ)</label>
+                <input type="number" name="age" value={formData.age} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm" />
+              </div>
+
+              <div className="w-full sm:w-1/6">
+                <label className="block text-gray-700 font-bold mb-2 text-xs">Gender</label>
+                <select name="gender" value={formData.gender} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm">
+                  <option value={0}>Male</option>
+                  <option value={1}>Female</option>
+                </select>
+              </div>
+
+              {/* เส้นแบ่งสายตาบางๆ */}
+              <div className="hidden sm:block h-10 border-l border-gray-300 mx-2"></div>
+
+              <div className="w-full sm:w-1/6">
+                <label className="block text-[#2C3E50] font-bold mb-2 text-xs">Occupants (คน)</label>
+                <select name="occupants" value={formData.occupants} onChange={handleChange} className="w-full p-2 bg-blue-50 border border-blue-200 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm font-bold text-blue-900">
+                  <option value={1}>1 Person</option>
+                  <option value={2}>2 Persons</option>
+                </select>
+              </div>
+
+              <div className="w-full sm:w-1/6">
+                <label className="block text-gray-700 font-bold mb-2 text-xs">Duration (ด.)</label>
+                <select name="duration" value={formData.duration} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm">
+                  <option value={1}>1 Month</option>
+                  <option value={6}>6 Months</option>
+                  <option value={12}>1 Year</option>
+                </select>
+              </div>
+
+              <div className="w-full sm:w-1/6 flex flex-col gap-2">
+                <label className="block text-gray-700 font-bold text-xs">Max Budget</label>
+                <input type="number" name="budget" value={formData.budget} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm font-bold text-orange-600" />
+              </div>
+
+              <div className="w-full sm:w-1/6 flex items-end">
+                <button type="submit" disabled={isLoading} className="w-full bg-[#1A1A1A] hover:bg-gray-800 text-white font-bold py-2 rounded shadow transition-colors flex justify-center items-center text-sm h-[38px]">
+                  {isLoading ? <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span> : 'Find'}
+                </button>
+              </div>
             </div>
 
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Age (อายุ)</label>
-              <input type="number" name="age" value={formData.age} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm" />
-            </div>
+            {/* 🎯 แถวที่สอง: Tenant 2 (จะโชว์เมื่อ occupants == 2) */}
+            {formData.occupants === 2 && (
+              <div className="flex flex-col sm:flex-row gap-4 items-end pt-4 mt-2 border-t border-dashed border-gray-300 animate-fade-in">
+                
+                <div className="w-full sm:w-1/6">
+                  <label className="block text-green-700 font-bold mb-2 text-xs">Tenant 2 DOB</label>
+                  <DatePicker selected={birthDate2} onChange={handleDateChange2} dateFormat="dd/MM/yyyy" placeholderText="วันเกิดคนที่ 2" showMonthDropdown showYearDropdown dropdownMode="select" yearDropdownItemNumber={100} scrollableYearDropdown maxDate={new Date()} className="w-full p-2 bg-green-50 border border-green-200 rounded focus:ring-2 focus:ring-green-400 outline-none text-sm" wrapperClassName="w-full"/>
+                </div>
 
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Gender</label>
-              <select name="gender" value={formData.gender} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm">
-                <option value={0}>Male</option>
-                <option value={1}>Female</option>
-              </select>
-            </div>
+                <div className="w-full sm:w-1/6">
+                  <label className="block text-gray-700 font-bold mb-2 text-xs">Age (อายุ)</label>
+                  <input type="number" name="age2" value={formData.age2} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-green-400 outline-none text-sm" />
+                </div>
 
-            {/* 🎯 เพิ่มตัวกรอง Occupants และ Duration */}
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Occupants (คน)</label>
-              <select name="occupants" value={formData.occupants} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm">
-                <option value={1}>1 Person</option>
-                <option value={2}>2 Persons</option>
-              </select>
-            </div>
+                <div className="w-full sm:w-1/6">
+                  <label className="block text-gray-700 font-bold mb-2 text-xs">Gender</label>
+                  <select name="gender2" value={formData.gender2} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-green-400 outline-none cursor-pointer text-sm">
+                    <option value={0}>Male</option>
+                    <option value={1}>Female</option>
+                  </select>
+                </div>
 
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Duration (ด.)</label>
-              <select name="duration" value={formData.duration} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm">
-                <option value={1}>1 Month</option>
-                <option value={6}>6 Months</option>
-                <option value={12}>1 Year</option>
-              </select>
-            </div>
+                {/* สร้างช่องว่าง (Empty Space) ดันให้ปุ่มด้านบนไม่เบี้ยว */}
+                <div className="hidden sm:block h-10 border-l border-transparent mx-2"></div>
+                <div className="hidden sm:block w-full sm:w-1/6"></div>
+                <div className="hidden sm:block w-full sm:w-1/6"></div>
+                <div className="hidden sm:block w-full sm:w-1/6"></div>
+                <div className="hidden sm:block w-full sm:w-1/6"></div>
+              </div>
+            )}
 
-            <div className="w-full sm:w-1/6">
-              <label className="block text-gray-700 font-bold mb-2 text-xs">Max Budget</label>
-              <input type="number" name="budget" value={formData.budget} onChange={handleChange} className="w-full p-2 bg-gray-100 border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none text-sm" />
-            </div>
-
-            <div className="w-full sm:w-1/6 flex gap-2">
-              <button type="submit" disabled={isLoading} className="w-full bg-[#1A1A1A] hover:bg-gray-800 text-white font-bold py-2 rounded shadow transition-colors flex justify-center items-center text-sm">
-                {isLoading ? <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span> : 'Find'}
-              </button>
-            </div>
           </form>
         </div>
 
         {hasSearched && aiPrediction && (
           <div className="w-full max-w-6xl mb-6 p-4 bg-[#8FAFC1] bg-opacity-20 border border-[#8FAFC1] rounded-lg flex items-center justify-between animate-fade-in">
             <div>
-              <span className="font-bold text-[#1A1A1A]">🧠 AI Prediction:</span>
+              <span className="font-bold text-[#1A1A1A]">🧠 AI Blended Prediction:</span>
               <span className="ml-2 text-gray-700">
                 The model predicts you might like <b>Floor {aiPrediction.preferred_floor}</b> with a <b>{aiPrediction.preferred_view}</b> view. 
-                <span className="text-gray-500 text-sm ml-2">
-                  (โมเดลวิเคราะห์ว่าคุณน่าจะชอบห้อง <b>ชั้น {aiPrediction.preferred_floor}</b> และวิวแบบ <b>{aiPrediction.preferred_view}</b>)
+                <span className="text-gray-500 text-sm ml-2 block sm:inline mt-1 sm:mt-0">
+                  (โมเดลวิเคราะห์ความต้องการ{formData.occupants === 2 ? 'แบบคู่' : ''}แล้วพบว่าน่าจะชอบชั้น <b>{aiPrediction.preferred_floor}</b> และวิว <b>{aiPrediction.preferred_view}</b>)
                 </span>
               </span>
             </div>
@@ -211,7 +271,6 @@ function RecommendRoom() {
                   <div className="p-5 flex-1">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-xl font-black text-[#1A1A1A]">ROOM {room.Room_ID}</h3>
-                      {/* 🎯 แสดงคะแนน 0-100 */}
                       <span className="text-[10px] font-bold px-2 py-1 bg-green-100 text-green-700 rounded-full">
                         Score: {room.Matching_Score}/100
                       </span>

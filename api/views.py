@@ -310,15 +310,20 @@ except Exception as e:
     ml_model_floor, ml_model_view = None, None
 
 # ==========================================
-# 🌟 API แนะนำห้องพักด้วย AI (Random Forest)
+# 🌟 API แนะนำห้องพักด้วย AI (Dual Prediction & Blending)
 # ==========================================
 class RecommendRoomView(APIView):
     def post(self, request):
+        # ข้อมูลผู้เช่าคนที่ 1
         age = int(request.data.get('age', 25))
         gender = int(request.data.get('gender', 0)) 
         budget = int(request.data.get('budget', 15000))
         occupants = int(request.data.get('occupants', 1))
         duration = int(request.data.get('duration', 12))
+
+        # ข้อมูลผู้เช่าคนที่ 2 (รับเพิ่มเข้ามา)
+        age2 = int(request.data.get('age2', age)) # ถ้าไม่มี ให้ถือว่าอายุใกล้ๆ กัน
+        gender2 = int(request.data.get('gender2', 1)) # สมมติฐานเบื้องต้นให้เป็นเพศตรงข้ามหรืออีกเพศ
 
         all_rooms = [
             {"Room_ID": "A1", "Floor": 1, "View_Type": "Sunset", "Price": 12000},
@@ -342,34 +347,44 @@ class RecommendRoomView(APIView):
 
         available_rooms = [r for r in all_rooms if r['Room_ID'] not in occupied_rooms]
 
-        # 🎯 2. ให้ AI พยากรณ์ (พร้อมระบบดัก Error)
-        predicted_floor = 1
-        predicted_view = "Sunrise"
+        # 🎯 2. ให้ AI พยากรณ์ (Dual Prediction)
+        predicted_floor_1, predicted_view_1 = 1, "Sunrise"
+        predicted_floor_2, predicted_view_2 = 1, "Sunrise"
         
         if ml_model_floor and ml_model_view:
             try:
-                # ลองพยากรณ์ด้วย 5 ตัวแปร
-                predicted_floor = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
-                predicted_view = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
+                # ทำนายใจคนที่ 1
+                predicted_floor_1 = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
+                predicted_view_1 = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
+                
+                # ทำนายใจคนที่ 2 (ถ้ามา 2 คน)
+                if occupants == 2:
+                    predicted_floor_2 = ml_model_floor.predict([[age2, gender2, budget, occupants, duration]])[0]
+                    predicted_view_2 = ml_model_view.predict([[age2, gender2, budget, occupants, duration]])[0]
             except Exception as e:
-                print(f"⚠️ AI Prediction Error (Fallback to default): {e}")
-                try:
-                    # ถ้าเจอโมเดลเก่ารับได้แค่ 3 ตัวแปร ก็ให้ลองส่งแค่ 3 ตัวแปร
-                    predicted_floor = ml_model_floor.predict([[age, gender, budget]])[0]
-                    predicted_view = ml_model_view.predict([[age, gender, budget]])[0]
-                except:
-                    pass
+                print(f"⚠️ AI Prediction Error: {e}")
 
-        # 🎯 3. คำนวณคะแนน
+        # 🎯 3. คำนวณคะแนนแบบ Blending (ประนีประนอม)
         recommended = []
         for room in available_rooms:
             if room['Price'] > budget:
                 continue
             
-            base_score = 0
-            if room['Floor'] == predicted_floor: base_score += 40
-            if room['View_Type'] == predicted_view: base_score += 40
+            # ให้คะแนนความชอบของคนที่ 1
+            score1 = 0
+            if room['Floor'] == predicted_floor_1: score1 += 40
+            if room['View_Type'] == predicted_view_1: score1 += 40
             
+            base_score = score1
+            
+            # ให้คะแนนความชอบของคนที่ 2 แล้วนำมา "เฉลี่ยกัน"
+            if occupants == 2:
+                score2 = 0
+                if room['Floor'] == predicted_floor_2: score2 += 40
+                if room['View_Type'] == predicted_view_2: score2 += 40
+                base_score = (score1 + score2) / 2 # พบกันครึ่งทาง!
+            
+            # โบนัสความคุ้มค่า (20 คะแนน)
             price_diff = budget - room['Price']
             price_bonus = min(20, (price_diff / budget) * 20) if price_diff > 0 else 0
             
@@ -378,11 +393,11 @@ class RecommendRoomView(APIView):
 
         recommended = sorted(recommended, key=lambda x: (x['raw_score'], -x['Price']), reverse=True)
 
-        # 🎯 4. ลอจิกป้องกันคะแนนซ้ำ และห้ามเกิน 100
+        # 🎯 4. Tie-breaker
         for i, room in enumerate(recommended):
             int_score = int(min(100, room['raw_score'])) 
             if i == 0:
-                final_score = int_score if int_score >= 90 else 95
+                final_score = int_score if int_score >= 90 else (95 if int_score > 70 else 85)
             else:
                 prev_score = recommended[i-1]['Matching_Score']
                 final_score = min(int_score, prev_score - 1)
@@ -390,10 +405,13 @@ class RecommendRoomView(APIView):
             room['Matching_Score'] = max(1, final_score) 
             del room['raw_score'] 
 
+        # เตรียมข้อความสรุป AI
+        ai_msg_floor = f"{int(predicted_floor_1)}" if occupants == 1 else f"{int(predicted_floor_1)} and {int(predicted_floor_2)}"
+        ai_msg_view = f"{predicted_view_1}" if occupants == 1 else f"{predicted_view_1} / {predicted_view_2}"
+
         return Response({
-            "message": "AI Recommendation via Random Forest",
-            "user_profile": {"age": age, "gender": gender, "budget": budget, "occupants": occupants, "duration": duration},
-            "ai_prediction": {"preferred_floor": int(predicted_floor), "preferred_view": predicted_view},
+            "message": "AI Dual Recommendation",
+            "ai_prediction": {"preferred_floor": ai_msg_floor, "preferred_view": ai_msg_view},
             "total_matches": len(recommended),
             "recommended_rooms": recommended
         })

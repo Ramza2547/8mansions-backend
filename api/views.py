@@ -17,10 +17,10 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
 import os
-import joblib # 🎯 นำเข้า joblib สำหรับโหลดโมเดล Machine Learning
+import joblib 
 
 # ==========================================
-# 1. ฟังก์ชันสำหรับระบบ Login (ฝังโค้ดสายลับไว้แล้ว)
+# 1. ฟังก์ชันสำหรับระบบ Login
 # ==========================================
 @api_view(['POST'])
 def login_api(request):
@@ -43,18 +43,16 @@ def login_api(request):
         return Response({"status": "error", "message": "Wrong Username Or Password"}, status=400)
 
 # ==========================================
-# 2. ฟังก์ชันจัดการข้อมูลลูกค้า (ดึงข้อมูล และ เพิ่มข้อมูลใหม่)
+# 2. ฟังก์ชันจัดการข้อมูลลูกค้า
 # ==========================================
 @api_view(['GET', 'POST'])
 def customer_list(request):
     if request.method == 'GET':
-        # ดึงมาเฉพาะคนที่ is_active=True (คนที่ยังไม่ถูกลบ)
         customers = Customer.objects.filter(is_active=True)
         serializer = CustomerSerializer(customers, many=True)
         return Response(serializer.data)
         
     elif request.method == 'POST':
-        # รับข้อมูลมาสร้างลูกค้าใหม่
         serializer = CustomerSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -71,7 +69,6 @@ def customer_soft_delete(request, pk):
     except Customer.DoesNotExist:
         return Response(status=404)
         
-    # เปลี่ยนสถานะเป็น False แทนการลบทิ้งจริงๆ
     customer.is_active = False
     customer.save()
     return Response(status=204)
@@ -86,7 +83,6 @@ def customer_update(request, pk):
     except Customer.DoesNotExist:
         return Response(status=404)
         
-    # partial=True หมายถึง อนุญาตให้แก้ไขแค่บางช่องได้
     serializer = CustomerSerializer(customer, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
@@ -94,7 +90,7 @@ def customer_update(request, pk):
     return Response(serializer.errors, status=400)
 
 class FeedbackViewSet(viewsets.ModelViewSet):
-    queryset = Feedback.objects.all().order_by('-created_at') # เรียงจากใหม่ไปเก่า
+    queryset = Feedback.objects.all().order_by('-created_at')
     serializer_class = FeedbackSerializer
 
 class InvoiceViewSet(viewsets.ModelViewSet):
@@ -104,7 +100,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 class UtilityCostViewSet(viewsets.ModelViewSet):
     queryset = UtilityCost.objects.all()
     serializer_class = UtilityCostSerializer
-    lookup_field = 'billingMonth' # ค้นหา/อัปเดตข้อมูลด้วยชื่อเดือนได้เลย
+    lookup_field = 'billingMonth'
 
 from .models import HistoryLog
 from .serializers import HistoryLogSerializer
@@ -113,19 +109,17 @@ class HistoryLogViewSet(viewsets.ModelViewSet):
     serializer_class = HistoryLogSerializer
 
     def get_queryset(self):
-        # ดึงประวัติทั้งหมด เรียงจากใหม่ไปเก่า
         queryset = HistoryLog.objects.all().order_by('-timestamp')
-        # ถ้า React ส่งรหัสลูกค้ามา (customer_id) ให้กรองเอาเฉพาะของคนนั้น
         customer_id = self.request.query_params.get('customer', None)
         if customer_id is not None:
             queryset = queryset.filter(customer_id=customer_id)
         return queryset
 
-# 🌟 2. อัปเกรดระบบหาตำแหน่ง Tesseract แบบอัตโนมัติ
-# (os.name == 'nt' หมายถึงกำลังรันอยู่บน Windows)
+# ==========================================
+# 🌟 ระบบ OCR พาสปอร์ตและบัตรประชาชน
+# ==========================================
 if os.name == 'nt':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-# ถ้าไม่ใช่ Windows (เช่นอยู่บน Render) ระบบจะไปเรียกใช้ Tesseract ของฝั่ง Linux แทน
 
 class PassportOCRView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -144,9 +138,7 @@ class PassportOCRView(APIView):
 
             custom_config = r'--oem 3 --psm 6'
             extracted_text = pytesseract.image_to_string(gray_img, lang='eng', config=custom_config)
-# ==========================================
-            # 🇹🇭 ลอจิกใหม่สุดล้ำสำหรับ "บัตรประชาชนไทย (ID Card)"
-            # ==========================================
+
             if doc_type == 'ID Card':
                 raw_name = ""
                 raw_last_name = ""
@@ -154,7 +146,6 @@ class PassportOCRView(APIView):
                 lines = extracted_text.split('\n')
 
                 for i, line in enumerate(lines):
-                    # 🎯 1. จับวันเกิดแบบล็อคเป้าเดือนภาษาอังกฤษ (Jan, Feb, ...) เพื่อแก้ปัญหา 01/01/2367
                     dob_match = re.search(r'(\d{1,2})\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})', line, re.IGNORECASE)
                     if dob_match and not dob_formatted:
                         day = dob_match.group(1).zfill(2)
@@ -167,7 +158,6 @@ class PassportOCRView(APIView):
                         if year > 2400: year -= 543
                         dob_formatted = f"{day}/{month}/{year}"
 
-                    # 🎯 2. กรองชื่อและนามสกุลให้เป๊ะ
                     line_lower = line.lower()
                     if 'name' in line_lower and 'last' not in line_lower and not raw_name:
                         idx = line_lower.find('name')
@@ -184,18 +174,15 @@ class PassportOCRView(APIView):
                                 cln_next = re.sub(r'[^A-Za-z\s]', '', next_line).strip()
                                 if not cln_next: continue
                                 
-                                # 🔥 เพิ่มคำขยะที่ OCR ชอบอ่านภาษาไทยพลาดลงไปใน Blacklist
                                 ignore_words = ['last', 'name', 'lest', 'lasi', 'lestoame', 'lastname', 'surname', 'ae', 'ee', 'of', 'boas', 'det', 'af', 'po', 'late']
                                 words_next = [w for w in cln_next.split() if w.lower() not in ignore_words]
                                 
-                                # คัดเฉพาะคำที่น่าจะเป็นนามสกุลจริงๆ (ยาวตั้งแต่ 3 ตัวอักษรขึ้นไป)
                                 valid_last_names = [w for w in words_next if len(w) >= 3]
                                 
                                 if valid_last_names:
                                     raw_last_name = " ".join(words_next)
                                     break
                 
-                # ประกอบร่างชื่อให้สวยงาม
                 full_name = f"{raw_name} {raw_last_name}".strip()
                 full_name = " ".join(full_name.split()).title()
 
@@ -205,9 +192,6 @@ class PassportOCRView(APIView):
                     'date_of_birth': dob_formatted
                 })
 
-            # ==========================================
-            # ✈️ ลอจิกสำหรับ "พาสปอร์ต (Passport)" (ใช้ของเดิม)
-            # ==========================================
             lines = extracted_text.split('\n')
             mrz_lines = [line.replace(" ", "") for line in lines if '<' in line and len(line) > 30]
 
@@ -250,10 +234,12 @@ class PassportOCRView(APIView):
             
         except Exception as e:
             import traceback
-            print("🚨 OCR Error Detail:", traceback.format_exc()) # พิมพ์ลง Logs ของ Render
+            print("🚨 OCR Error Detail:", traceback.format_exc()) 
             return Response({'error': f'การประมวลผลผิดพลาด: {str(e)}'}, status=500)
-        
-# ดาวน์โหลดดิกชันนารี (ใส่ไว้ข้างนอกคลาสเพื่อให้โหลดแค่ครั้งเดียว)
+
+# ==========================================
+# 🌟 ระบบ Sentiment Analysis
+# ==========================================
 nltk.download('vader_lexicon', quiet=True)
 
 class SentimentAnalysisView(APIView):
@@ -268,7 +254,6 @@ class SentimentAnalysisView(APIView):
         
         text_lower = text.lower()
         
-        # 🎯 เพิ่มคลังคำศัพท์เฉพาะทาง เพื่อช่วย AI ตัดสินใจ
         repair_keywords = ['repair', 'fix', 'broken', 'not working', 'leak', 'plumbing', 'aircon', 'water']
         positive_keywords = ['fast', 'good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'best']
         negative_keywords = ['bad', 'slow', 'terrible', 'worst', 'awful', 'dirty']
@@ -277,7 +262,6 @@ class SentimentAnalysisView(APIView):
         has_positive = any(k in text_lower for k in positive_keywords)
         has_negative = any(k in text_lower for k in negative_keywords)
         
-        # 🎯 กฎการตัดสินใจใหม่ (ถ้ามีคำในลิสต์ หรือคะแนนถึงเกณฑ์)
         if is_repair:
             result = "🛠️ แจ้งซ่อม (Repair Request) 🚨"
         elif has_positive or compound >= 0.3:
@@ -293,9 +277,8 @@ class SentimentAnalysisView(APIView):
             'is_repair': is_repair
         })
 
-
 # ==========================================
-# 🌟 ระบบโหลดโมเดล Machine Learning (Scikit-Learn)
+# 🌟 ระบบโหลดโมเดล Machine Learning
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_floor_path = os.path.join(BASE_DIR, 'ml_model_floor.pkl')
@@ -310,20 +293,30 @@ except Exception as e:
     ml_model_floor, ml_model_view = None, None
 
 # ==========================================
-# 🌟 API แนะนำห้องพักด้วย AI (Dual Prediction & Blending)
+# 🌟 API แนะนำห้องพักด้วย AI
 # ==========================================
 class RecommendRoomView(APIView):
     def post(self, request):
-        # ข้อมูลผู้เช่าคนที่ 1
-        age = int(request.data.get('age', 25))
-        gender = int(request.data.get('gender', 0)) 
-        budget = int(request.data.get('budget', 15000))
-        occupants = int(request.data.get('occupants', 1))
-        duration = int(request.data.get('duration', 12))
+        
+        # 🎯 ฟังก์ชันผู้ช่วย: ป้องกันแอปพังเวลารับค่าว่างจาก Frontend
+        def safe_int(val, default_val):
+            try:
+                if val == "" or val is None:
+                    return default_val
+                return int(val)
+            except (ValueError, TypeError):
+                return default_val
 
-        # ข้อมูลผู้เช่าคนที่ 2 (รับเพิ่มเข้ามา)
-        age2 = int(request.data.get('age2', age)) # ถ้าไม่มี ให้ถือว่าอายุใกล้ๆ กัน
-        gender2 = int(request.data.get('gender2', 1)) # สมมติฐานเบื้องต้นให้เป็นเพศตรงข้ามหรืออีกเพศ
+        # ใช้ safe_int แทน int() ธรรมดา
+        age = safe_int(request.data.get('age'), 25)
+        gender = safe_int(request.data.get('gender'), 0) 
+        budget = safe_int(request.data.get('budget'), 15000)
+        occupants = safe_int(request.data.get('occupants'), 1)
+        duration = safe_int(request.data.get('duration'), 12)
+
+        # ข้อมูลผู้เช่าคนที่ 2 (ถ้าไม่มีข้อมูล ส่งค่าของคนที่ 1 แทน)
+        age2 = safe_int(request.data.get('age2'), age) 
+        gender2 = safe_int(request.data.get('gender2'), 1)
 
         all_rooms = [
             {"Room_ID": "A1", "Floor": 1, "View_Type": "Sunset", "Price": 12000},
@@ -336,7 +329,6 @@ class RecommendRoomView(APIView):
             {"Room_ID": "D2", "Floor": 2, "View_Type": "No sunlight", "Price": 12000},
         ]
 
-        # 🎯 1. ระบบกรองห้องที่ไม่ว่าง
         active_customers = Customer.objects.filter(is_active=True)
         occupied_rooms = []
         for customer in active_customers:
@@ -347,44 +339,37 @@ class RecommendRoomView(APIView):
 
         available_rooms = [r for r in all_rooms if r['Room_ID'] not in occupied_rooms]
 
-        # 🎯 2. ให้ AI พยากรณ์ (Dual Prediction)
         predicted_floor_1, predicted_view_1 = 1, "Sunrise"
         predicted_floor_2, predicted_view_2 = 1, "Sunrise"
         
         if ml_model_floor and ml_model_view:
             try:
-                # ทำนายใจคนที่ 1
                 predicted_floor_1 = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
                 predicted_view_1 = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
                 
-                # ทำนายใจคนที่ 2 (ถ้ามา 2 คน)
                 if occupants == 2:
                     predicted_floor_2 = ml_model_floor.predict([[age2, gender2, budget, occupants, duration]])[0]
                     predicted_view_2 = ml_model_view.predict([[age2, gender2, budget, occupants, duration]])[0]
             except Exception as e:
                 print(f"⚠️ AI Prediction Error: {e}")
 
-        # 🎯 3. คำนวณคะแนนแบบ Blending (ประนีประนอม)
         recommended = []
         for room in available_rooms:
             if room['Price'] > budget:
                 continue
             
-            # ให้คะแนนความชอบของคนที่ 1
             score1 = 0
             if room['Floor'] == predicted_floor_1: score1 += 40
             if room['View_Type'] == predicted_view_1: score1 += 40
             
             base_score = score1
             
-            # ให้คะแนนความชอบของคนที่ 2 แล้วนำมา "เฉลี่ยกัน"
             if occupants == 2:
                 score2 = 0
                 if room['Floor'] == predicted_floor_2: score2 += 40
                 if room['View_Type'] == predicted_view_2: score2 += 40
-                base_score = (score1 + score2) / 2 # พบกันครึ่งทาง!
+                base_score = (score1 + score2) / 2 
             
-            # โบนัสความคุ้มค่า (20 คะแนน)
             price_diff = budget - room['Price']
             price_bonus = min(20, (price_diff / budget) * 20) if price_diff > 0 else 0
             
@@ -393,7 +378,6 @@ class RecommendRoomView(APIView):
 
         recommended = sorted(recommended, key=lambda x: (x['raw_score'], -x['Price']), reverse=True)
 
-        # 🎯 4. Tie-breaker
         for i, room in enumerate(recommended):
             int_score = int(min(100, room['raw_score'])) 
             if i == 0:
@@ -405,7 +389,6 @@ class RecommendRoomView(APIView):
             room['Matching_Score'] = max(1, final_score) 
             del room['raw_score'] 
 
-        # เตรียมข้อความสรุป AI
         ai_msg_floor = f"{int(predicted_floor_1)}" if occupants == 1 else f"{int(predicted_floor_1)} and {int(predicted_floor_2)}"
         ai_msg_view = f"{predicted_view_1}" if occupants == 1 else f"{predicted_view_1} / {predicted_view_2}"
 

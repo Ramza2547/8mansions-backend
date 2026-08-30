@@ -298,7 +298,6 @@ except Exception as e:
 class RecommendRoomView(APIView):
     def post(self, request):
         
-        # 🎯 ฟังก์ชันผู้ช่วย: ป้องกันแอปพังเวลารับค่าว่างจาก Frontend
         def safe_int(val, default_val):
             try:
                 if val == "" or val is None:
@@ -307,16 +306,21 @@ class RecommendRoomView(APIView):
             except (ValueError, TypeError):
                 return default_val
 
-        # ใช้ safe_int แทน int() ธรรมดา
         age = safe_int(request.data.get('age'), 25)
         gender = safe_int(request.data.get('gender'), 0) 
         budget = safe_int(request.data.get('budget'), 15000)
         occupants = safe_int(request.data.get('occupants'), 1)
         duration = safe_int(request.data.get('duration'), 12)
+        occupation = safe_int(request.data.get('occupation'), 1)
+        personality = safe_int(request.data.get('personality'), 0)
+        wfh = safe_int(request.data.get('wfh'), 0)
+        vehicle = safe_int(request.data.get('vehicle'), 0)
+        luggage = safe_int(request.data.get('luggage'), 0)
 
-        # ข้อมูลผู้เช่าคนที่ 2 (ถ้าไม่มีข้อมูล ส่งค่าของคนที่ 1 แทน)
         age2 = safe_int(request.data.get('age2'), age) 
         gender2 = safe_int(request.data.get('gender2'), 1)
+        occupation2 = safe_int(request.data.get('occupation2'), occupation)
+        personality2 = safe_int(request.data.get('personality2'), personality)
 
         all_rooms = [
             {"Room_ID": "A1", "Floor": 1, "View_Type": "Sunset", "Price": 12000},
@@ -344,12 +348,14 @@ class RecommendRoomView(APIView):
         
         if ml_model_floor and ml_model_view:
             try:
-                predicted_floor_1 = ml_model_floor.predict([[age, gender, budget, occupants, duration]])[0]
-                predicted_view_1 = ml_model_view.predict([[age, gender, budget, occupants, duration]])[0]
+                features_1 = [[age, gender, budget, occupants, duration, occupation, personality, wfh, vehicle, luggage]]
+                predicted_floor_1 = ml_model_floor.predict(features_1)[0]
+                predicted_view_1 = ml_model_view.predict(features_1)[0]
                 
                 if occupants == 2:
-                    predicted_floor_2 = ml_model_floor.predict([[age2, gender2, budget, occupants, duration]])[0]
-                    predicted_view_2 = ml_model_view.predict([[age2, gender2, budget, occupants, duration]])[0]
+                    features_2 = [[age2, gender2, budget, occupants, duration, occupation2, personality2, wfh, vehicle, luggage]]
+                    predicted_floor_2 = ml_model_floor.predict(features_2)[0]
+                    predicted_view_2 = ml_model_view.predict(features_2)[0]
             except Exception as e:
                 print(f"⚠️ AI Prediction Error: {e}")
 

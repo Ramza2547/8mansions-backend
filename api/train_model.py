@@ -46,7 +46,7 @@ df = pd.DataFrame({
 })
 
 df.to_csv('historical_room_data.csv', index=False)
-print("✅ Saved 500 records to 'historical_room_data.csv'")
+print("Saved 500 records to 'historical_room_data.csv'")
 
 # 3. เตรียม Features และ Targets
 X = df[['Age', 'Gender', 'Budget', 'Occupants', 'Duration', 'Occupation', 'Personality', 'WFH', 'Vehicle', 'Luggage']]
@@ -79,4 +79,4 @@ rf_view.fit(X, y_view)
 
 joblib.dump(rf_floor, 'ml_model_floor.pkl')
 joblib.dump(rf_view, 'ml_model_view.pkl')
-print("\n✅ Successfully trained and saved Random Forest models!")
+print("\nSuccessfully trained and saved Random Forest models!")

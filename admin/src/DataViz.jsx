@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
-// 🎯 แก้ไขการ Import Chart.js ให้ดึงทุกฟีเจอร์มาลงทะเบียนรวดเดียว ป้องกัน Error "Not registered" ถาวร
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { Chart, Doughnut, Bar } from 'react-chartjs-2';
 
-ChartJS.register(
-  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler
-);
+// 🎯 ลงทะเบียนระบบทั้งหมดของ Chart.js แบบปลอดภัย 100%
+ChartJS.register(...registerables);
 
 function DataViz() {
   const navigate = useNavigate();
   const [filterValue, setFilterValue] = useState(new Date().getFullYear().toString() + '-ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [kpi, setKpi] = useState({ revenue: 0, cost: 0, profit: 0 });
-  const [costDetails, setCostDetails] = useState({ pea: 0, pwa: 0 }); // 🎯 เก็บค่าแยกเพื่อเอาไปโชว์ใต้โดนัท
+  const [costDetails, setCostDetails] = useState({ pea: 0, pwa: 0 });
 
   const [mainChartData, setMainChartData] = useState(null);
   const [breakdownChartData, setBreakdownChartData] = useState(null);
@@ -53,7 +50,6 @@ function DataViz() {
           axios.get('https://eightmansions-backend-1.onrender.com/api/utility-costs/')
         ]);
 
-        // 🎯 ดัก Error: ป้องกันกรณีที่ API ส่งกลับมาไม่ใช่ Array
         const invoices = Array.isArray(resInvoices.data) ? resInvoices.data : [];
         const utils = Array.isArray(resUtils.data) ? resUtils.data : [];
 
@@ -124,7 +120,6 @@ function DataViz() {
           });
 
         } else {
-          // รายเดือน
           const roomRevenues = Array(8).fill(0);
           const roomRental = Array(8).fill(0);
           const roomElec = Array(8).fill(0);
@@ -180,7 +175,7 @@ function DataViz() {
         });
 
         setKpi({ revenue: totalRev, cost: totalCost, profit: totalProfit });
-        setCostDetails({ pea: totalPEA, pwa: totalPWA }); // 🎯 เซฟแยกไว้คำนวณ % โชว์
+        setCostDetails({ pea: totalPEA, pwa: totalPWA });
 
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -192,7 +187,6 @@ function DataViz() {
     fetchAndProcessData();
   }, [filterValue]);
 
-  // Options ทั่วไป
   const commonOptions = {
     responsive: true, 
     maintainAspectRatio: false,
@@ -216,17 +210,15 @@ function DataViz() {
     }
   };
 
-  // Options โดนัทแบบคลีนๆ
   const doughnutOptions = {
     responsive: true, 
     maintainAspectRatio: false,
     plugins: { 
-      legend: { display: false }, // ซ่อน Legend เดิม เพราะเราจะสร้างเองให้สวยกว่า
+      legend: { display: false },
       tooltip: { callbacks: { label: (c) => ` ${c.label}: ฿${c.parsed.toLocaleString('en-US', {minimumFractionDigits: 2})}` } }
     }
   };
 
-  // 🎯 คำนวณเปอร์เซ็นต์แบบปลอดภัย
   const peaPercent = kpi.cost > 0 ? Math.round((costDetails.pea / kpi.cost) * 100) : 0;
   const pwaPercent = kpi.cost > 0 ? Math.round((costDetails.pwa / kpi.cost) * 100) : 0;
 
@@ -305,7 +297,6 @@ function DataViz() {
                 {breakdownChartData && <Bar data={breakdownChartData} options={stackedOptions} />}
               </div>
 
-              {/* 🎯 กราฟโดนัทฉบับอัปเกรด HTML/CSS Custom Legend */}
               <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 h-[350px] w-full border border-gray-200 flex flex-col items-center justify-between">
                 <h2 className="text-lg font-extrabold text-gray-700 mb-2 text-center">Cost Distribution (สัดส่วนต้นทุน)</h2>
                 
@@ -317,7 +308,6 @@ function DataViz() {
                   )}
                 </div>
 
-                {/* สร้าง Legend ป้ายบอก % และจำนวนเงินแบบกำหนดเอง */}
                 {kpi.cost > 0 && (
                   <div className="flex justify-around w-full mt-4 bg-gray-50 rounded-lg p-2 border border-gray-100">
                     <div className="text-center">
@@ -329,7 +319,7 @@ function DataViz() {
                       <p className="text-[11px] font-bold text-gray-500">฿{costDetails.pea.toLocaleString('en-US')}</p>
                     </div>
                     
-                    <div className="w-px bg-gray-300 mx-2"></div> {/* เส้นคั่นกลาง */}
+                    <div className="w-px bg-gray-300 mx-2"></div>
 
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1">

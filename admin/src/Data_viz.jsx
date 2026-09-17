@@ -15,11 +15,11 @@ import {
   Filler
 } from 'chart.js';
 import { Chart, Doughnut, Bar } from 'react-chartjs-2';
-import ChartDataLabels from 'chartjs-plugin-datalabels'; // 🎯 นำเข้า Plugin วาดตัวเลข
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// แก้จากของเดิม เป็นแบบนี้ครับ
+// 🎯 ลงทะเบียน Plugin ให้ครบ และรวม ChartDataLabels ไว้ตรงนี้เลย
 ChartJS.register(
-  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler
+  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler, ChartDataLabels
 );
 
 function DataViz() {
@@ -79,8 +79,10 @@ function DataViz() {
           const monthlyWaterRev = Array(12).fill(0);
 
           resInvoices.data.forEach(inv => {
-            if (inv.isPaid && inv.billingMonth.includes(yearStr)) {
-              const monthIndex = MONTHS.indexOf(inv.billingMonth.split(' ')[0]);
+            // 🎯 ป้องกัน Error หน้าขาว: ดักกรณี billingMonth เป็นค่าว่าง
+            const bMonth = inv.billingMonth || '';
+            if (inv.isPaid && bMonth.includes(yearStr)) {
+              const monthIndex = MONTHS.indexOf(bMonth.split(' ')[0]);
               if (monthIndex !== -1) {
                 monthlyRevenue[monthIndex] += Number(inv.totalAmount) || 0;
                 monthlyRental[monthIndex] += Number(inv.roomRental) || 0;
@@ -92,8 +94,10 @@ function DataViz() {
           });
 
           resUtils.data.forEach(cost => {
-            if (cost.billingMonth.includes(yearStr)) {
-              const monthIndex = MONTHS.indexOf(cost.billingMonth.split(' ')[0]);
+            // 🎯 ป้องกัน Error หน้าขาว: ดักกรณี billingMonth เป็นค่าว่าง
+            const bMonth = cost.billingMonth || '';
+            if (bMonth.includes(yearStr)) {
+              const monthIndex = MONTHS.indexOf(bMonth.split(' ')[0]);
               if (monthIndex !== -1) {
                 const pea = Number(cost.pea_cost) || 0;
                 const pwa = Number(cost.pwa_cost) || 0;
@@ -129,13 +133,15 @@ function DataViz() {
           });
 
         } else {
+          // โหมดรายเดือน
           const roomRevenues = Array(8).fill(0);
           const roomRental = Array(8).fill(0);
           const roomElec = Array(8).fill(0);
           const roomWater = Array(8).fill(0);
           
           resInvoices.data.forEach(inv => {
-            if (inv.isPaid && inv.billingMonth === filterValue) {
+            const bMonth = inv.billingMonth || '';
+            if (inv.isPaid && bMonth === filterValue) {
               const rIdx = ROOMS.indexOf(inv.room);
               if (rIdx !== -1) {
                 roomRevenues[rIdx] += Number(inv.totalAmount) || 0;
@@ -147,7 +153,7 @@ function DataViz() {
             }
           });
 
-          const costObj = resUtils.data.find(c => c.billingMonth === filterValue);
+          const costObj = resUtils.data.find(c => (c.billingMonth || '') === filterValue);
           if (costObj) {
             totalPEA = Number(costObj.pea_cost) || 0;
             totalPWA = Number(costObj.pwa_cost) || 0;
@@ -194,16 +200,16 @@ function DataViz() {
     fetchAndProcessData();
   }, [filterValue]);
 
-  // 🎯 Options พื้นฐาน (แก้ขอบตกแกน X และปิดตัวเลขบนกราฟแท่งไม่ให้รก)
-const commonOptions = {
+  // 🎯 Options: ปิด datalabels ไม่ให้กวนกราฟแท่งและกราฟเส้น
+  const commonOptions = {
     responsive: true, 
     maintainAspectRatio: false,
     layout: { padding: { bottom: 10 } }, 
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { position: 'top', labels: { font: { size: 12, weight: 'bold' } } },
-      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ฿${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` } }
-      // ลบ datalabels: { display: false } ตรงนี้ทิ้งไปเลยครับ
+      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ฿${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` } },
+      datalabels: { display: false } // ปิดปลั๊กอิน DataLabels ตรงนี้
     },
     scales: { 
       x: { ticks: { padding: 5 } }, 
@@ -219,7 +225,7 @@ const commonOptions = {
     }
   };
 
-  // 🎯 Options สำหรับโดนัท (เพิ่ม % และจำนวน)
+  // 🎯 Options โดนัท: เปิด datalabels เพื่อโชว์เปอร์เซ็นต์
   const doughnutOptions = {
     responsive: true, 
     maintainAspectRatio: false,
@@ -228,12 +234,12 @@ const commonOptions = {
       legend: { position: 'right' },
       tooltip: { callbacks: { label: (c) => ` ${c.label}: ฿${c.parsed.toLocaleString('en-US', {minimumFractionDigits: 2})}` } },
       datalabels: {
-        display: true,
+        display: true, // เปิดใช้งานเฉพาะกราฟนี้
         color: '#fff',
         font: { weight: 'bold', size: 12 },
         formatter: (value, ctx) => {
           let total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-          if (total === 0 || value === 0) return ''; // ถ้าค่าเป็น 0 ไม่ต้องแสดงข้อความ
+          if (total === 0 || value === 0) return '';
           let percentage = Math.round((value / total) * 100) + '%';
           return `฿${value.toLocaleString()}\n(${percentage})`;
         },

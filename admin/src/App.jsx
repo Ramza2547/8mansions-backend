@@ -14,7 +14,7 @@ import PaymentChecking from './PaymentChecking';
 import PaymentSuccess from './PaymentSuccess';
 import AdminFeedback from './AdminFeedback';
 import RevenueData from './RevenueData';
-import Data_Viz from './Data_viz'; // (ปรับ Path ให้ตรงกับที่คุณเก็บไฟล์ไว้)
+import DataViz from './DataViz';
 
 // 🎯 1. อิมพอร์ตไฟล์หน้า Dashboard เข้ามา
 import AdminFeedbackDashboard from './AdminFeedbackDashboard'; 

@@ -15,11 +15,10 @@ import {
   Filler
 } from 'chart.js';
 import { Chart, Doughnut, Bar } from 'react-chartjs-2';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+// 🎯 ลบ ChartDataLabels ออกทั้งหมด เพื่อป้องกันการ Crash ถาวร
 
-// 🎯 ลงทะเบียน Plugin ให้ครบ และรวม ChartDataLabels ไว้ตรงนี้เลย
 ChartJS.register(
-  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler, ChartDataLabels
+  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler
 );
 
 function DataViz() {
@@ -27,6 +26,7 @@ function DataViz() {
   const [filterValue, setFilterValue] = useState(new Date().getFullYear().toString() + '-ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [kpi, setKpi] = useState({ revenue: 0, cost: 0, profit: 0 });
+  const [costDetails, setCostDetails] = useState({ pea: 0, pwa: 0 }); // 🎯 เก็บค่าแยกเพื่อเอาไปโชว์ใต้โดนัท
 
   const [mainChartData, setMainChartData] = useState(null);
   const [breakdownChartData, setBreakdownChartData] = useState(null);
@@ -64,6 +64,10 @@ function DataViz() {
           axios.get('https://eightmansions-backend-1.onrender.com/api/utility-costs/')
         ]);
 
+        // 🎯 ดัก Error: ป้องกันกรณีที่ API ส่งกลับมาไม่ใช่ Array
+        const invoices = Array.isArray(resInvoices.data) ? resInvoices.data : [];
+        const utils = Array.isArray(resUtils.data) ? resUtils.data : [];
+
         const isYearlyView = filterValue.endsWith('-ALL');
         let totalRev = 0, totalCost = 0, totalProfit = 0;
         let totalPEA = 0, totalPWA = 0;
@@ -78,8 +82,7 @@ function DataViz() {
           const monthlyElecRev = Array(12).fill(0);
           const monthlyWaterRev = Array(12).fill(0);
 
-          resInvoices.data.forEach(inv => {
-            // 🎯 ป้องกัน Error หน้าขาว: ดักกรณี billingMonth เป็นค่าว่าง
+          invoices.forEach(inv => {
             const bMonth = inv.billingMonth || '';
             if (inv.isPaid && bMonth.includes(yearStr)) {
               const monthIndex = MONTHS.indexOf(bMonth.split(' ')[0]);
@@ -93,8 +96,7 @@ function DataViz() {
             }
           });
 
-          resUtils.data.forEach(cost => {
-            // 🎯 ป้องกัน Error หน้าขาว: ดักกรณี billingMonth เป็นค่าว่าง
+          utils.forEach(cost => {
             const bMonth = cost.billingMonth || '';
             if (bMonth.includes(yearStr)) {
               const monthIndex = MONTHS.indexOf(bMonth.split(' ')[0]);
@@ -133,13 +135,13 @@ function DataViz() {
           });
 
         } else {
-          // โหมดรายเดือน
+          // รายเดือน
           const roomRevenues = Array(8).fill(0);
           const roomRental = Array(8).fill(0);
           const roomElec = Array(8).fill(0);
           const roomWater = Array(8).fill(0);
           
-          resInvoices.data.forEach(inv => {
+          invoices.forEach(inv => {
             const bMonth = inv.billingMonth || '';
             if (inv.isPaid && bMonth === filterValue) {
               const rIdx = ROOMS.indexOf(inv.room);
@@ -153,7 +155,7 @@ function DataViz() {
             }
           });
 
-          const costObj = resUtils.data.find(c => (c.billingMonth || '') === filterValue);
+          const costObj = utils.find(c => (c.billingMonth || '') === filterValue);
           if (costObj) {
             totalPEA = Number(costObj.pea_cost) || 0;
             totalPWA = Number(costObj.pwa_cost) || 0;
@@ -189,6 +191,7 @@ function DataViz() {
         });
 
         setKpi({ revenue: totalRev, cost: totalCost, profit: totalProfit });
+        setCostDetails({ pea: totalPEA, pwa: totalPWA }); // 🎯 เซฟแยกไว้คำนวณ % โชว์
 
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -200,7 +203,7 @@ function DataViz() {
     fetchAndProcessData();
   }, [filterValue]);
 
-  // 🎯 Options: ปิด datalabels ไม่ให้กวนกราฟแท่งและกราฟเส้น
+  // Options ทั่วไป
   const commonOptions = {
     responsive: true, 
     maintainAspectRatio: false,
@@ -208,8 +211,7 @@ function DataViz() {
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { position: 'top', labels: { font: { size: 12, weight: 'bold' } } },
-      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ฿${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` } },
-      datalabels: { display: false } // ปิดปลั๊กอิน DataLabels ตรงนี้
+      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ฿${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` } }
     },
     scales: { 
       x: { ticks: { padding: 5 } }, 
@@ -225,28 +227,19 @@ function DataViz() {
     }
   };
 
-  // 🎯 Options โดนัท: เปิด datalabels เพื่อโชว์เปอร์เซ็นต์
+  // Options โดนัทแบบคลีนๆ
   const doughnutOptions = {
     responsive: true, 
     maintainAspectRatio: false,
-    layout: { padding: 20 },
     plugins: { 
-      legend: { position: 'right' },
-      tooltip: { callbacks: { label: (c) => ` ${c.label}: ฿${c.parsed.toLocaleString('en-US', {minimumFractionDigits: 2})}` } },
-      datalabels: {
-        display: true, // เปิดใช้งานเฉพาะกราฟนี้
-        color: '#fff',
-        font: { weight: 'bold', size: 12 },
-        formatter: (value, ctx) => {
-          let total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-          if (total === 0 || value === 0) return '';
-          let percentage = Math.round((value / total) * 100) + '%';
-          return `฿${value.toLocaleString()}\n(${percentage})`;
-        },
-        textAlign: 'center'
-      }
+      legend: { display: false }, // ซ่อน Legend เดิม เพราะเราจะสร้างเองให้สวยกว่า
+      tooltip: { callbacks: { label: (c) => ` ${c.label}: ฿${c.parsed.toLocaleString('en-US', {minimumFractionDigits: 2})}` } }
     }
   };
+
+  // 🎯 คำนวณเปอร์เซ็นต์แบบปลอดภัย
+  const peaPercent = kpi.cost > 0 ? Math.round((costDetails.pea / kpi.cost) * 100) : 0;
+  const pwaPercent = kpi.cost > 0 ? Math.round((costDetails.pwa / kpi.cost) * 100) : 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans pb-10">
@@ -323,15 +316,42 @@ function DataViz() {
                 {breakdownChartData && <Bar data={breakdownChartData} options={stackedOptions} />}
               </div>
 
-              <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 h-[350px] w-full border border-gray-200 flex flex-col items-center">
+              {/* 🎯 กราฟโดนัทฉบับอัปเกรด HTML/CSS Custom Legend */}
+              <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 h-[350px] w-full border border-gray-200 flex flex-col items-center justify-between">
                 <h2 className="text-lg font-extrabold text-gray-700 mb-2 text-center">Cost Distribution (สัดส่วนต้นทุน)</h2>
-                <div className="relative w-full h-[250px] flex justify-center">
+                
+                <div className="relative w-full h-[180px] flex justify-center">
                   {kpi.cost > 0 ? (
                     <Doughnut data={costChartData} options={doughnutOptions} />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400 font-bold italic">No Cost Data</div>
                   )}
                 </div>
+
+                {/* สร้าง Legend ป้ายบอก % และจำนวนเงินแบบกำหนดเอง */}
+                {kpi.cost > 0 && (
+                  <div className="flex justify-around w-full mt-4 bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="w-3 h-3 rounded-full bg-[#E74C3C]"></span>
+                        <p className="text-xs font-bold text-gray-600">PEA (ค่าไฟ)</p>
+                      </div>
+                      <p className="text-lg font-black text-[#E74C3C] mt-1">{peaPercent}%</p>
+                      <p className="text-[11px] font-bold text-gray-500">฿{costDetails.pea.toLocaleString('en-US')}</p>
+                    </div>
+                    
+                    <div className="w-px bg-gray-300 mx-2"></div> {/* เส้นคั่นกลาง */}
+
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="w-3 h-3 rounded-full bg-[#3498DB]"></span>
+                        <p className="text-xs font-bold text-gray-600">PWA (ค่าน้ำ)</p>
+                      </div>
+                      <p className="text-lg font-black text-[#3498DB] mt-1">{pwaPercent}%</p>
+                      <p className="text-[11px] font-bold text-gray-500">฿{costDetails.pwa.toLocaleString('en-US')}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>

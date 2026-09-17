@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
+
+// 🎯 แก้ไขการ Import Chart.js ให้ดึงทุกฟีเจอร์มาลงทะเบียนรวดเดียว ป้องกัน Error "Not registered" ถาวร
+import { Chart as ChartJS, registerables } from 'chart.js';
 import { Chart, Doughnut, Bar } from 'react-chartjs-2';
-// 🎯 ลบ ChartDataLabels ออกทั้งหมด เพื่อป้องกันการ Crash ถาวร
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler

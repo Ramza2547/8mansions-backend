@@ -259,14 +259,14 @@ function RevenueData() {
     html2pdf().set(opt).from(element).save();
   };
 
-  // 🎯 ฟังก์ชันจัดการปุ่มกราฟ (ตรวจสอบการ Save Data)
+// 🎯 อัปเดตฟังก์ชันเพื่อเปิดหน้ากราฟ
   const handleViewChart = () => {
     if (isUnsaved) {
       alert("กรุณากดปุ่ม Save Data เพื่อบันทึกล่าสุดก่อนสร้างกราฟครับ!");
       return;
     }
-    // ถ้าเซฟแล้ว ให้เปิด Modal ตัวโครงร่างกราฟ
-    setShowChartModal(true);
+    // เปลี่ยนไปหน้า Data Visualization
+    navigate('/admin/dataviz'); 
   };
 
   const isYearlyView = filterMonth.endsWith('-ALL');

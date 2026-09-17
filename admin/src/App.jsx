@@ -14,6 +14,7 @@ import PaymentChecking from './PaymentChecking';
 import PaymentSuccess from './PaymentSuccess';
 import AdminFeedback from './AdminFeedback';
 import RevenueData from './RevenueData';
+import DataViz from './Data_viz'; // (ปรับ Path ให้ตรงกับที่คุณเก็บไฟล์ไว้)
 
 // 🎯 1. อิมพอร์ตไฟล์หน้า Dashboard เข้ามา
 import AdminFeedbackDashboard from './AdminFeedbackDashboard'; 
@@ -36,8 +37,7 @@ function App() {
           <Route path="/admin/payment/success" element={<PaymentSuccess />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />
           <Route path="/admin/revenue-data" element={<RevenueData />} />
-
-          {/* 🎯 2. เพิ่ม Route สำหรับหน้ากราฟ Pie Chart แยกลิงก์ไปเลย */}
+          <Route path="/admin/dataviz" element={<DataViz />} />
           <Route path="/admin/feedback/dashboard" element={<AdminFeedbackDashboard />} />
 
         </Routes>

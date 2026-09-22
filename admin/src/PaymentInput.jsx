@@ -8,21 +8,28 @@ function PaymentInput() {
   const navigate = useNavigate();
   const [occupiedRooms, setOccupiedRooms] = useState([]);
   
+  // 🌟 เพิ่ม State สำหรับสถานะกำลังโหลด
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [formData, setFormData] = useState({
     room: '', name: '', dueDate: '', roomRentalRemark: '', roomRental: '',
     oldElectric: '', newElectric: '', oldWater: '', newWater: '',
     hasOther: false, otherDetail: '', otherAmount: ''
   });
 
-  // 🎯 เพิ่ม State สำหรับแจ้งเตือน (Custom Alert)
   const [alertData, setAlertData] = useState({ show: false, type: '', text: '' });
 
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
   useEffect(() => {
     const fetchCustomers = async () => {
+      setIsLoading(true); // 🌟 เริ่มโหลดข้อมูล
       try {
-        const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/');
+        // 🌟 ตั้งเวลา Timeout 15 วินาที เพื่อดักจับกรณีเซิร์ฟเวอร์หลับหรือรอนานเกินไป
+        const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', {
+          timeout: 15000 
+        });
+        
         if (Array.isArray(response.data)) {
           const occupied = [];
           
@@ -41,10 +48,25 @@ function PaymentInput() {
         }
       } catch (error) { 
         console.error("ดึงข้อมูลไม่สำเร็จ", error); 
-        // 🎯 ดักจับ Error ตอนดึงข้อมูล
-        setAlertData({ show: true, type: 'error', text: 'ไม่สามารถโหลดข้อมูลห้องได้ กรุณาลองใหม่อีกครั้ง' });
+        // 🌟 เช็คว่า Error เกิดจาก Timeout หรือไม่
+        if (error.code === 'ECONNABORTED') {
+          setAlertData({ 
+            show: true, 
+            type: 'error', 
+            text: '⏳ หมดเวลาการเชื่อมต่อ (Timeout) เซิร์ฟเวอร์กำลังรีสตาร์ทตัวเอง กรุณารอ 1 นาทีแล้วลองรีเฟรชใหม่ครับ' 
+          });
+        } else {
+          setAlertData({ 
+            show: true, 
+            type: 'error', 
+            text: 'ไม่สามารถโหลดข้อมูลห้องได้ กรุณาลองใหม่อีกครั้ง หรือตรวจสอบอินเทอร์เน็ต' 
+          });
+        }
+      } finally {
+        setIsLoading(false); // 🌟 โหลดเสร็จแล้ว (ไม่ว่าจะสำเร็จหรือพัง) ปิด Spinner
       }
     };
+    
     fetchCustomers();
   }, []);
 
@@ -79,7 +101,6 @@ function PaymentInput() {
   const disableRoomRental = isWithholding; 
   const disableUtils = isWithholding || isDeposit; 
 
-  // 🎯 เปลี่ยนลอจิกการแจ้งเตือนจาก alert() มาเรียก setAlertData แทน
   const handleNext = () => {
     if (!formData.room) return setAlertData({ show: true, type: 'warning', text: 'กรุณาเลือกห้องพัก' });
     if (!formData.dueDate) return setAlertData({ show: true, type: 'warning', text: 'กรุณาระบุวันครบกำหนดชำระ (Due Date)' });
@@ -89,7 +110,6 @@ function PaymentInput() {
       if (!formData.otherAmount) return setAlertData({ show: true, type: 'warning', text: 'กรุณากรอกจำนวนเงินในช่อง Other' });
     }
     
-    // ดักจับกรณีผู้ใช้ไม่ได้กรอกอะไรเลยใน Room Rental
     if (!disableRoomRental && (formData.roomRental === '' || formData.roomRental === undefined)) {
       return setAlertData({ show: true, type: 'warning', text: 'กรุณากรอกยอดเงินในช่อง Room Rental (หากไม่มีให้ใส่ -)' });
     }
@@ -129,12 +149,25 @@ function PaymentInput() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center py-8 sm:py-10 px-4">
-        <div className="w-full max-w-3xl bg-white sm:bg-transparent p-4 sm:p-0 rounded-lg shadow-sm sm:shadow-none">
+        {/* 🌟 เพิ่ม relative และ overflow-hidden เพื่อให้ตัว Loading บังฟอร์มได้พอดี */}
+        <div className="w-full max-w-3xl bg-white sm:bg-transparent p-4 sm:p-0 rounded-lg shadow-sm sm:shadow-none relative overflow-hidden min-h-[400px]">
+          
+          {/* 🌟 UI ส่วนของ Loading Spinner (แสดงเมื่อกำลังดึงข้อมูล) */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg">
+              <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
+              <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2 animate-pulse">กำลังซิงค์รายชื่อห้องพัก...</h3>
+              <p className="text-gray-500 font-medium text-center px-4 text-sm">
+                หากเป็นการเข้าใช้งานครั้งแรก ระบบกำลังปลุกเซิร์ฟเวอร์<br/>อาจใช้เวลาประมาณ 30-60 วินาที
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-xl mx-auto">
             
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className="text-gray-700 font-medium text-sm sm:text-base">Choose Room</label>
-              <select value={formData.room} onChange={handleRoomChange} className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1]">
+              <select value={formData.room} onChange={handleRoomChange} disabled={isLoading} className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] disabled:bg-gray-200 disabled:cursor-not-allowed">
                 <option value="" disabled>เลือกห้อง</option>
                 {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} - {r.name}</option>)}
               </select>
@@ -142,7 +175,7 @@ function PaymentInput() {
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className="text-gray-700 font-medium text-sm sm:text-base">Name</label>
-              <input type="text" value={formData.name} readOnly className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed"  />
+              <input type="text" value={formData.name} readOnly disabled={isLoading} className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed"  />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
@@ -153,7 +186,8 @@ function PaymentInput() {
                   onChange={handleDateChange}
                   dateFormat="dd/MM/yyyy"
                   placeholderText="วว / ดด / ปปปป"
-                  className="w-full p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none"
+                  disabled={isLoading}
+                  className="w-full p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none disabled:bg-gray-200 disabled:cursor-not-allowed"
                   wrapperClassName="w-full"
                 />
                 <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +198,7 @@ function PaymentInput() {
 
             <div className="mt-2 sm:mt-4 p-3 sm:p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
               <label className="flex items-center gap-3 text-gray-800 font-bold cursor-pointer mb-2 sm:mb-4 text-sm sm:text-base">
-                <input type="checkbox" checked={formData.hasOther} onChange={handleOtherCheck} className="w-4 h-4 sm:w-5 sm:h-5" />
+                <input type="checkbox" checked={formData.hasOther} onChange={handleOtherCheck} disabled={isLoading} className="w-4 h-4 sm:w-5 sm:h-5 disabled:cursor-not-allowed" />
                 Add Other (เพิ่มรายการอื่นๆ)
               </label>
 
@@ -172,7 +206,7 @@ function PaymentInput() {
                 <div className="flex flex-col gap-3 sm:gap-4 mt-3 animate-fade-in-up">
                   <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
                     <label className="text-gray-700 font-medium text-sm sm:text-base">Other Detail</label>
-                    <select name="otherDetail" value={formData.otherDetail} onChange={handleChange} className="w-full p-2 bg-white border border-gray-300 rounded outline-none">
+                    <select name="otherDetail" value={formData.otherDetail} onChange={handleChange} disabled={isLoading} className="w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed">
                       <option value="" disabled>เลือกลักษณะรายการ</option>
                       <option value="Deposit">Deposit</option>
                       <option value="Withholding Deposit">Withholding Deposit</option>
@@ -189,7 +223,8 @@ function PaymentInput() {
                         name="otherAmount" 
                         value={formData.otherAmount} 
                         onChange={handleChange} 
-                        className={`w-full p-2 bg-white border border-gray-300 rounded outline-none ${isRefund ? 'pl-6 text-red-600 font-bold' : ''}`} 
+                        disabled={isLoading}
+                        className={`w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed ${isRefund ? 'pl-6 text-red-600 font-bold' : ''}`} 
                         placeholder="ระบุจำนวนเงิน (THB)" 
                       />
                     </div>
@@ -207,9 +242,9 @@ function PaymentInput() {
                     name="roomRentalRemark" 
                     value={disableRoomRental ? '' : formData.roomRentalRemark} 
                     onChange={handleChange} 
-                    disabled={disableRoomRental} 
+                    disabled={disableRoomRental || isLoading} 
                     placeholder="Detail" 
-                    className={`w-1/2 p-2 border rounded outline-none text-sm ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                    className={`w-1/2 p-2 border rounded outline-none text-sm ${disableRoomRental || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
                   />
                 )}
                 <input 
@@ -217,34 +252,34 @@ function PaymentInput() {
                   name="roomRental" 
                   value={disableRoomRental ? '' : formData.roomRental} 
                   onChange={handleChange} 
-                  disabled={disableRoomRental} 
-                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-2 border rounded outline-none ${disableRoomRental ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                  disabled={disableRoomRental || isLoading} 
+                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-2 border rounded outline-none ${disableRoomRental || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
                 />
               </div>
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>Old Electric meter (Unit)</label>
-              <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-2 border rounded outline-none ${disableUtils ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>New Electric meter (Unit)</label>
-              <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-2 border rounded outline-none ${disableUtils ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>Old Water meter (Unit)</label>
-              <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-2 border rounded outline-none ${disableUtils ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>New Water meter (Unit)</label>
-              <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-2 border rounded outline-none ${disableUtils ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
             </div>
 
             <div className="flex justify-center mt-6">
-              <button onClick={handleNext} className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-16 rounded shadow-md transition-transform active:scale-95 text-lg">
+              <button onClick={handleNext} disabled={isLoading} className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-16 rounded shadow-md transition-transform active:scale-95 text-lg disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed">
                 Next
               </button>
             </div>
@@ -277,7 +312,7 @@ function PaymentInput() {
               {alertData.type === 'warning' && 'แจ้งเตือน'}
             </h3>
             
-            <p className="text-gray-600 mb-6 font-medium">{alertData.text}</p>
+            <p className="text-gray-600 mb-6 font-medium leading-relaxed">{alertData.text}</p>
             
             <button
               onClick={() => setAlertData({ show: false, type: '', text: '' })}

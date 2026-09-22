@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,8 +6,12 @@ function DataPage() {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   
-  // 🌟 เพิ่ม State สำหรับสถานะกำลังโหลด
+  // 🌟 State สำหรับ Auto-Retry Loading
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [countdown, setCountdown] = useState(60);
+  const [statusMessage, setStatusMessage] = useState('กำลังเชื่อมต่อฐานข้อมูล...');
+  const retryCount = useRef(0);
   
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editingRoom, setEditingRoom] = useState('');
@@ -24,41 +28,58 @@ function DataPage() {
 
   useEffect(() => {
     fetchCustomers();
+    
+    // Cleanup intervals เมื่อออกจากหน้าเว็บ
+    return () => {
+      if (window.dataInterval) clearInterval(window.dataInterval);
+      if (window.dataCountdown) clearInterval(window.dataCountdown);
+    };
   }, []);
 
   const fetchCustomers = async () => {
-    setIsLoading(true); // 🌟 เริ่มโหลด
+    setIsLoading(true);
+    setLoadProgress(0);
+    setCountdown(60);
+    setStatusMessage(retryCount.current > 0 ? `กำลังลองเชื่อมต่อใหม่รอบที่ ${retryCount.current}...` : 'กำลังเชื่อมต่อฐานข้อมูล...');
+
+    // วิ่งหลอดโหลด
+    window.dataInterval = setInterval(() => {
+      setLoadProgress((prev) => (prev < 90 ? prev + Math.floor(Math.random() * 5) + 2 : prev));
+    }, 1000);
+
+    // วิ่งเวลานับถอยหลัง
+    window.dataCountdown = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
     try {
-      // 🌟 เพิ่ม timeout 15 วินาที ถ้าเซิร์ฟเวอร์ไม่ตอบสนองจะโดดไป catch ทันที
-      const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', {
-        timeout: 15000 
-      });
+      // ให้เวลาดึง 60 วิ (ครอบคลุม Cold Start ของ Render)
+      const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', { timeout: 60000 });
+      
+      clearInterval(window.dataInterval);
+      clearInterval(window.dataCountdown);
+      setLoadProgress(100);
+      setStatusMessage('โหลดข้อมูลสำเร็จ!');
       
       if (Array.isArray(response.data)) {
         setCustomers(response.data);
       } else {
         setCustomers([]);
       }
-    } catch (error) {
-      console.error("ดึงข้อมูลไม่สำเร็จ", error);
-      setCustomers([]); 
       
-      // 🌟 เช็คว่าเกิดจากการหมดเวลา (Timeout) หรือไม่
-      if (error.code === 'ECONNABORTED') {
-        setAlertMessage({ 
-          show: true, 
-          type: 'error', 
-          text: '⏳ หมดเวลาการเชื่อมต่อ (Timeout) เซิร์ฟเวอร์กำลังรีสตาร์ทตัวเอง กรุณารอ 1 นาทีแล้วรีเฟรชหน้าเว็บใหม่ครับ' 
-        });
-      } else {
-        setAlertMessage({ 
-          show: true, 
-          type: 'warning', 
-          text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือรีเฟรชหน้าเว็บ' 
-        });
-      }
-    } finally {
-      setIsLoading(false); // 🌟 โหลดเสร็จแล้ว ปิดสถานะโหลด
+      // หน่วงเวลาให้เห็นหลอด 100% สักแปปค่อยซ่อนหน้าจอโหลด
+      setTimeout(() => setIsLoading(false), 800);
+      retryCount.current = 0; // รีเซ็ตตัวนับเมื่อสำเร็จ
+      
+    } catch (error) {
+      clearInterval(window.dataInterval);
+      clearInterval(window.dataCountdown);
+      
+      setStatusMessage('เซิร์ฟเวอร์ยังไม่ตอบสนอง... กำลังเริ่มโหลดใหม่');
+      retryCount.current += 1;
+      
+      // 🌟 Auto-Retry ในอีก 3 วินาที
+      setTimeout(() => fetchCustomers(), 3000);
     }
   };
 
@@ -115,20 +136,28 @@ function DataPage() {
       setEditingCustomer(null); 
       setEditingRoom(''); 
       fetchCustomers(); 
+
       setAlertMessage({ show: true, type: 'success', text: 'บันทึกการแก้ไขข้อมูลสำเร็จ!' });
       
     } catch (error) {
-      setAlertMessage({ show: true, type: 'error', text: 'เกิดข้อผิดพลาด: ' + JSON.stringify(error.response?.data || error.message) });
+      console.error('Update error:', error.response);
+      setAlertMessage({ 
+        show: true, 
+        type: 'error', 
+        text: 'เกิดข้อผิดพลาด: ' + JSON.stringify(error.response?.data || error.message) 
+      });
     }
   };
 
   const handleHistoryClick = async (customer, room) => {
     setViewingHistory(customer);
     setHistoryRoom(room);
+    
     try {
       const response = await axios.get(`https://eightmansions-backend-1.onrender.com/api/history/?customer=${customer.id}`);
       setRoomHistoryLogs(response.data);
     } catch (error) {
+      console.error("ดึงประวัติไม่สำเร็จ", error);
       setRoomHistoryLogs([]);
     }
   };
@@ -153,13 +182,15 @@ function DataPage() {
     });
 
     return {
-      room: room, cust: cust,
+      room: room,
+      cust: cust,
       displayName: cust?.name ? cust.name : '-',
       displayNationality: cust?.nationality ? cust.nationality : '-',
       displayDob: formatDate(cust?.date_of_birth),
       displayName2: cust?.name_2 ? cust.name_2 : '',
       displayNationality2: cust?.nationality_2 ? cust.nationality_2 : '',
       displayDob2: formatDate(cust?.date_of_birth_2),
+      
       displayLeaseStart: formatDate(cust?.lease_start),
       displayLeaseEnd: formatDate(cust?.lease_end),
       isEmptyRoom: !cust,
@@ -177,7 +208,7 @@ function DataPage() {
   }).filter(item => {
     if (filterMode === 'occupied') return !item.isEmptyRoom;
     if (filterMode === 'vacant') return item.isEmptyRoom;
-    if (filterMode === 'ending_soon') return !item.isEmptyRoom;
+    if (filterMode === 'ending_soon') return !item.isEmptyRoom; 
     return true; 
   }).sort((a, b) => {
     if (filterMode === 'ending_soon') {
@@ -211,11 +242,20 @@ function DataPage() {
         <div className="w-full max-w-5xl">
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-            <button onClick={() => navigate('/admin/revenue-data')} className="bg-[#2C3E50] hover:bg-black text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95">
+            <button 
+              onClick={() => navigate('/admin/revenue-data')} 
+              className="bg-[#2C3E50] hover:bg-black text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
               Revenue Data
             </button>
-            <a href="https://tm30.immigration.go.th/" target="_blank" rel="noopener noreferrer" className="bg-[#607D8B] hover:bg-[#455A64] text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95">
+
+            <a 
+              href="https://tm30.immigration.go.th/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-[#607D8B] hover:bg-[#455A64] text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
               TM30 Registration
             </a>
@@ -225,32 +265,55 @@ function DataPage() {
             <h2 className="text-xl font-bold text-[#2C3E50] whitespace-nowrap">Rooms Data <span className="text-sm font-normal text-gray-500">({filteredRooms.length} found)</span></h2>
             
             <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-              <select value={filterMode} onChange={(e) => setFilterMode(e.target.value)} className="w-full sm:w-auto p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer bg-gray-50 text-gray-700 font-medium">
+              <select
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+                className="w-full sm:w-auto p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer bg-gray-50 text-gray-700 font-medium"
+              >
                 <option value="all">All Rooms (ทั้งหมด)</option>
                 <option value="occupied">Occupied (มีผู้เช่า)</option>
                 <option value="vacant">Vacant (ห้องว่าง)</option>
                 <option value="ending_soon">Ending Soon (ใกล้หมดสัญญา)</option>
               </select>
+
               <div className="relative w-full sm:w-80">
-                <input type="text" placeholder="Search room, name, nationality..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none transition-shadow" />
+                <input
+                  type="text"
+                  placeholder="Search room, name, nationality..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8FAFC1] outline-none transition-shadow"
+                />
                 <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               </div>
             </div>
           </div>
 
-          {/* 🌟 2. เงื่อนไขการแสดงผล UI ตอนกำลังโหลด vs โหลดเสร็จ */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 items-start relative min-h-[300px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 items-start relative min-h-[400px]">
+            {/* 🌟 UI ส่วนของ Auto-Retry Loading */}
             {isLoading ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EAEAEA] z-10 py-10">
+              <div className="absolute inset-0 bg-[#EAEAEA]/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg shadow-sm border border-gray-200">
                 <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
-                <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2 animate-pulse">กำลังซิงค์ข้อมูลผู้เช่า...</h3>
-                <p className="text-gray-500 font-medium text-center px-4">
-                  หากเป็นการเข้าใช้งานครั้งแรก ระบบกำลังปลุกเซิร์ฟเวอร์<br/>อาจใช้เวลาประมาณ 30-60 วินาที
+                <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2">{statusMessage}</h3>
+                
+                <div className="w-64 bg-gray-300 rounded-full h-2.5 my-3">
+                  <div 
+                    className="bg-[#2C3E50] h-2.5 rounded-full transition-all duration-500 ease-out" 
+                    style={{ width: `${loadProgress}%` }}
+                  ></div>
+                </div>
+                
+                <p className="text-[#1A1A1A] font-bold text-sm font-mono mt-1">
+                  ใช้เวลาประมาณ: <span className="text-red-600">{countdown}</span> วินาที
+                </p>
+                <p className="text-gray-500 font-medium text-center px-4 text-[11px] mt-4">
+                  (ระบบจะพยายามดึงข้อมูลใหม่อัตโนมัติ โดยไม่ต้องรีเฟรชหน้าเว็บ)
                 </p>
               </div>
             ) : filteredRooms.length > 0 ? (
               filteredRooms.map((data, index) => (
                 <div key={index} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 border-l-4 border-transparent hover:border-[#8FAFC1]">
+                  
                   <div className="text-[14px] sm:text-[15px] text-[#1A1A1A] leading-relaxed mb-4 sm:mb-0 w-full pr-4">
                     <div className="font-extrabold text-[16px] sm:text-[18px] mb-3 text-[#2C3E50] border-b pb-1">Room {data.room}</div>
                     
@@ -285,20 +348,37 @@ function DataPage() {
                   </div>
 
                   <div className="flex flex-col gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                    <button onClick={() => handleEditClick(data.cust, data.room)} disabled={data.isEmptyRoom} className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#F39C12] hover:bg-[#D68910] active:scale-95'}`}>
+                    <button 
+                      onClick={() => handleEditClick(data.cust, data.room)}
+                      disabled={data.isEmptyRoom}
+                      className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm
+                        ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#F39C12] hover:bg-[#D68910] active:scale-95'}`}
+                    >
                       Edit
                     </button>
-                    <button onClick={() => handleHistoryClick(data.cust, data.room)} disabled={data.isEmptyRoom} className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#3498DB] hover:bg-[#2980B9] active:scale-95'}`}>
+
+                    <button 
+                      onClick={() => handleHistoryClick(data.cust, data.room)}
+                      disabled={data.isEmptyRoom}
+                      className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm
+                        ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#3498DB] hover:bg-[#2980B9] active:scale-95'}`}
+                    >
                       History
                     </button>
-                    <button onClick={() => handleDeleteClick(data.cust?.id, data.room)} disabled={data.isEmptyRoom} className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm whitespace-nowrap ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#FF0000] hover:bg-red-700 active:scale-95'}`}>
+
+                    <button 
+                      onClick={() => handleDeleteClick(data.cust?.id, data.room)}
+                      disabled={data.isEmptyRoom}
+                      className={`w-full sm:w-auto text-white font-bold py-2 sm:py-3 px-5 rounded transition-all duration-200 text-[14px] sm:text-[15px] shadow-sm whitespace-nowrap
+                        ${data.isEmptyRoom ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-[#FF0000] hover:bg-red-700 active:scale-95'}`}
+                    >
                       Delete
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-lg shadow-sm">
+              <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-lg shadow-sm border border-gray-200">
                 <p className="text-gray-500 text-lg">No results found.</p>
                 <button onClick={() => {setSearchTerm(''); setFilterMode('all');}} className="mt-4 text-[#3498DB] hover:underline font-bold">Clear Filters</button>
               </div>
@@ -307,7 +387,7 @@ function DataPage() {
         </div>
       </div>
 
-      {/* Popup Edit / History Components (คงเดิม) */}
+      {/* Popup Edit Customer */}
       {editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg animate-fade-in-up max-h-[90vh] overflow-y-auto">
@@ -315,6 +395,7 @@ function DataPage() {
               Edit Customer <span className="text-[#3498DB]">({editingRoom})</span>
             </h2>
             <div className="flex flex-col gap-4">
+              
               <div className="bg-gray-50 p-4 rounded-lg border">
                 <h3 className="font-bold text-[#2C3E50] mb-3">Tenant 1</h3>
                 <div className="flex flex-col gap-3">
@@ -332,6 +413,7 @@ function DataPage() {
                   </div>
                 </div>
               </div>
+
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <h3 className="font-bold text-green-800 mb-3">Tenant 2 (Optional)</h3>
                 <div className="flex flex-col gap-3">
@@ -349,6 +431,7 @@ function DataPage() {
                   </div>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4 mt-2">
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-sm text-blue-700">Lease Start</label>
@@ -360,6 +443,7 @@ function DataPage() {
                 </div>
               </div>
             </div>
+            
             <div className="flex justify-end gap-3 mt-8">
               <button onClick={() => { setEditingCustomer(null); setEditingRoom(''); }} className="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded transition-colors">Cancel</button>
               <button onClick={handleSaveEdit} className="px-5 py-2 bg-[#27AE60] hover:bg-[#1E8449] text-white font-bold rounded transition-colors shadow-md">Save Changes</button>
@@ -368,12 +452,14 @@ function DataPage() {
         </div>
       )}
 
+      {/* Popup Audit Log */}
       {viewingHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100] p-4">
           <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-3xl animate-fade-in-up max-h-[90vh] flex flex-col">
             <h2 className="text-2xl font-bold mb-5 text-[#2C3E50] border-b pb-2 shrink-0">
               Audit Log <span className="text-[#3498DB]">({historyRoom})</span>
             </h2>
+            
             <div className="overflow-y-auto flex-1 pr-2">
               {roomHistoryLogs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-gray-500">
@@ -405,6 +491,7 @@ function DataPage() {
                 </table>
               )}
             </div>
+
             <div className="flex justify-end gap-3 mt-6 shrink-0 pt-4 border-t">
               <button onClick={() => { setViewingHistory(null); setHistoryRoom(''); }} className="px-6 py-2 bg-gray-800 hover:bg-black text-white font-bold rounded transition-colors shadow-md">
                 Close Window
@@ -414,38 +501,42 @@ function DataPage() {
         </div>
       )}
 
-      {/* 🌟 Custom Alert Popup รองรับแจ้งเตือน Timeout แบบสวยงาม */}
+      {/* Custom Alert Popup */}
       {alertMessage.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
+            
             {alertMessage.type === 'success' && (
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm border-4 border-green-50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
               </div>
             )}
             {alertMessage.type === 'error' && (
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm border-4 border-red-50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
               </div>
             )}
             {alertMessage.type === 'warning' && (
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-sm">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-sm border-4 border-yellow-50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
             )}
+            
             <h3 className={`text-xl font-extrabold mb-2 
               ${alertMessage.type === 'success' ? 'text-green-700' : ''}
               ${alertMessage.type === 'error' ? 'text-red-700' : ''}
               ${alertMessage.type === 'warning' ? 'text-yellow-600' : ''}
             `}>
               {alertMessage.type === 'success' && 'Success!'}
-              {alertMessage.type === 'error' && 'Error / Timeout!'}
+              {alertMessage.type === 'error' && 'Error!'}
               {alertMessage.type === 'warning' && 'Please Wait'}
             </h3>
+            
             <p className="text-gray-600 mb-6 font-medium leading-relaxed">{alertMessage.text}</p>
+            
             <button
               onClick={() => setAlertMessage({ show: false, type: '', text: '' })}
-              className={`px-8 py-3 font-bold text-white rounded-full transition-transform active:scale-95 w-full shadow-md 
+              className={`px-8 py-3 font-bold text-white rounded-xl transition-transform active:scale-95 w-full shadow-md 
                 ${alertMessage.type === 'success' ? 'bg-[#27AE60] hover:bg-[#1E8449]' : ''}
                 ${alertMessage.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : ''}
                 ${alertMessage.type === 'warning' ? 'bg-[#F39C12] hover:bg-[#D68910]' : ''}
@@ -456,6 +547,7 @@ function DataPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

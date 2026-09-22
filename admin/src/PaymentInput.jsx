@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
@@ -8,8 +8,12 @@ function PaymentInput() {
   const navigate = useNavigate();
   const [occupiedRooms, setOccupiedRooms] = useState([]);
   
-  // 🌟 เพิ่ม State สำหรับสถานะกำลังโหลด
+  // 🌟 State สำหรับ Auto-Retry Loading
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [countdown, setCountdown] = useState(60);
+  const [statusMessage, setStatusMessage] = useState('กำลังเชื่อมต่อฐานข้อมูลห้องพัก...');
+  const retryCount = useRef(0);
   
   const [formData, setFormData] = useState({
     room: '', name: '', dueDate: '', roomRentalRemark: '', roomRental: '',
@@ -22,53 +26,72 @@ function PaymentInput() {
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
   useEffect(() => {
-    const fetchCustomers = async () => {
-      setIsLoading(true); // 🌟 เริ่มโหลดข้อมูล
-      try {
-        // 🌟 ตั้งเวลา Timeout 15 วินาที เพื่อดักจับกรณีเซิร์ฟเวอร์หลับหรือรอนานเกินไป
-        const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', {
-          timeout: 15000 
+    fetchCustomers();
+    
+    // Cleanup intervals เมื่อออกจากหน้าเว็บ
+    return () => {
+      if (window.payInterval) clearInterval(window.payInterval);
+      if (window.payCountdown) clearInterval(window.payCountdown);
+    };
+  }, []);
+
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    setLoadProgress(0);
+    setCountdown(60);
+    setStatusMessage(retryCount.current > 0 ? `กำลังลองเชื่อมต่อใหม่รอบที่ ${retryCount.current}...` : 'กำลังเตรียมรายชื่อห้องพัก...');
+
+    // วิ่งหลอดโหลด
+    window.payInterval = setInterval(() => {
+      setLoadProgress((prev) => (prev < 90 ? prev + Math.floor(Math.random() * 5) + 2 : prev));
+    }, 1000);
+
+    // วิ่งเวลานับถอยหลัง
+    window.payCountdown = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    try {
+      // ให้เวลาดึง 60 วิ
+      const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', { timeout: 60000 });
+      
+      clearInterval(window.payInterval);
+      clearInterval(window.payCountdown);
+      setLoadProgress(100);
+      setStatusMessage('โหลดข้อมูลสำเร็จ!');
+      
+      if (Array.isArray(response.data)) {
+        const occupied = [];
+        
+        roomNames.forEach((room) => {
+          const customerInRoom = response.data.find(c => {
+            const dbRoom = String(c.room || c.room_number || c.room_name || "").toUpperCase().trim();
+            return dbRoom === room.toUpperCase();
+          });
+
+          if (customerInRoom) {
+            occupied.push({ room: room, name: customerInRoom.name });
+          }
         });
         
-        if (Array.isArray(response.data)) {
-          const occupied = [];
-          
-          roomNames.forEach((room) => {
-            const customerInRoom = response.data.find(c => {
-              const dbRoom = String(c.room || c.room_number || c.room_name || "").toUpperCase().trim();
-              return dbRoom === room.toUpperCase();
-            });
-
-            if (customerInRoom) {
-              occupied.push({ room: room, name: customerInRoom.name });
-            }
-          });
-          
-          setOccupiedRooms(occupied);
-        }
-      } catch (error) { 
-        console.error("ดึงข้อมูลไม่สำเร็จ", error); 
-        // 🌟 เช็คว่า Error เกิดจาก Timeout หรือไม่
-        if (error.code === 'ECONNABORTED') {
-          setAlertData({ 
-            show: true, 
-            type: 'error', 
-            text: '⏳ หมดเวลาการเชื่อมต่อ (Timeout) เซิร์ฟเวอร์กำลังรีสตาร์ทตัวเอง กรุณารอ 1 นาทีแล้วลองรีเฟรชใหม่ครับ' 
-          });
-        } else {
-          setAlertData({ 
-            show: true, 
-            type: 'error', 
-            text: 'ไม่สามารถโหลดข้อมูลห้องได้ กรุณาลองใหม่อีกครั้ง หรือตรวจสอบอินเทอร์เน็ต' 
-          });
-        }
-      } finally {
-        setIsLoading(false); // 🌟 โหลดเสร็จแล้ว (ไม่ว่าจะสำเร็จหรือพัง) ปิด Spinner
+        setOccupiedRooms(occupied);
       }
-    };
-    
-    fetchCustomers();
-  }, []);
+      
+      // หน่วงเวลาให้เห็นหลอด 100% สักแปปค่อยซ่อนหน้าจอโหลด
+      setTimeout(() => setIsLoading(false), 800);
+      retryCount.current = 0; // รีเซ็ตตัวนับเมื่อสำเร็จ
+      
+    } catch (error) {
+      clearInterval(window.payInterval);
+      clearInterval(window.payCountdown);
+      
+      setStatusMessage('เซิร์ฟเวอร์ยังไม่ตอบสนอง... กำลังเริ่มดึงข้อมูลใหม่');
+      retryCount.current += 1;
+      
+      // 🌟 Auto-Retry ในอีก 3 วินาที
+      setTimeout(() => fetchCustomers(), 3000);
+    }
+  };
 
   const handleRoomChange = (e) => {
     const selectedRoom = e.target.value;
@@ -149,16 +172,27 @@ function PaymentInput() {
       </nav>
 
       <div className="flex-1 flex justify-center items-center py-8 sm:py-10 px-4">
-        {/* 🌟 เพิ่ม relative และ overflow-hidden เพื่อให้ตัว Loading บังฟอร์มได้พอดี */}
-        <div className="w-full max-w-3xl bg-white sm:bg-transparent p-4 sm:p-0 rounded-lg shadow-sm sm:shadow-none relative overflow-hidden min-h-[400px]">
+        {/* 🌟 ใส่ relative และ overflow-hidden ให้ตัว Loading บังฟอร์มพอดี */}
+        <div className="w-full max-w-3xl bg-white sm:bg-transparent p-4 sm:p-0 rounded-lg shadow-sm sm:shadow-none relative overflow-hidden min-h-[450px]">
           
-          {/* 🌟 UI ส่วนของ Loading Spinner (แสดงเมื่อกำลังดึงข้อมูล) */}
+          {/* 🌟 UI ส่วนของ Auto-Retry Loading */}
           {isLoading && (
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg">
+            <div className="absolute inset-0 bg-[#EAEAEA]/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg shadow-sm border border-gray-200">
               <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
-              <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2 animate-pulse">กำลังซิงค์รายชื่อห้องพัก...</h3>
-              <p className="text-gray-500 font-medium text-center px-4 text-sm">
-                หากเป็นการเข้าใช้งานครั้งแรก ระบบกำลังปลุกเซิร์ฟเวอร์<br/>อาจใช้เวลาประมาณ 30-60 วินาที
+              <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2">{statusMessage}</h3>
+              
+              <div className="w-64 bg-gray-300 rounded-full h-2.5 my-3">
+                <div 
+                  className="bg-[#2C3E50] h-2.5 rounded-full transition-all duration-500 ease-out" 
+                  style={{ width: `${loadProgress}%` }}
+                ></div>
+              </div>
+              
+              <p className="text-[#1A1A1A] font-bold text-sm font-mono mt-1">
+                ใช้เวลาประมาณ: <span className="text-red-600">{countdown}</span> วินาที
+              </p>
+              <p className="text-gray-500 font-medium text-center px-4 text-[11px] mt-4">
+                (ระบบจะพยายามเชื่อมต่อใหม่อัตโนมัติ โดยไม่ต้องรีเฟรชหน้าเว็บ)
               </p>
             </div>
           )}
@@ -167,7 +201,12 @@ function PaymentInput() {
             
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className="text-gray-700 font-medium text-sm sm:text-base">Choose Room</label>
-              <select value={formData.room} onChange={handleRoomChange} disabled={isLoading} className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] disabled:bg-gray-200 disabled:cursor-not-allowed">
+              <select 
+                value={formData.room} 
+                onChange={handleRoomChange} 
+                disabled={isLoading}
+                className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] disabled:bg-gray-200 disabled:cursor-not-allowed"
+              >
                 <option value="" disabled>เลือกห้อง</option>
                 {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} - {r.name}</option>)}
               </select>
@@ -175,7 +214,13 @@ function PaymentInput() {
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
               <label className="text-gray-700 font-medium text-sm sm:text-base">Name</label>
-              <input type="text" value={formData.name} readOnly disabled={isLoading} className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed"  />
+              <input 
+                type="text" 
+                value={formData.name} 
+                readOnly 
+                disabled={isLoading}
+                className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed" 
+              />
             </div>
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
@@ -198,7 +243,13 @@ function PaymentInput() {
 
             <div className="mt-2 sm:mt-4 p-3 sm:p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
               <label className="flex items-center gap-3 text-gray-800 font-bold cursor-pointer mb-2 sm:mb-4 text-sm sm:text-base">
-                <input type="checkbox" checked={formData.hasOther} onChange={handleOtherCheck} disabled={isLoading} className="w-4 h-4 sm:w-5 sm:h-5 disabled:cursor-not-allowed" />
+                <input 
+                  type="checkbox" 
+                  checked={formData.hasOther} 
+                  onChange={handleOtherCheck} 
+                  disabled={isLoading}
+                  className="w-4 h-4 sm:w-5 sm:h-5 disabled:cursor-not-allowed" 
+                />
                 Add Other (เพิ่มรายการอื่นๆ)
               </label>
 
@@ -206,7 +257,13 @@ function PaymentInput() {
                 <div className="flex flex-col gap-3 sm:gap-4 mt-3 animate-fade-in-up">
                   <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
                     <label className="text-gray-700 font-medium text-sm sm:text-base">Other Detail</label>
-                    <select name="otherDetail" value={formData.otherDetail} onChange={handleChange} disabled={isLoading} className="w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed">
+                    <select 
+                      name="otherDetail" 
+                      value={formData.otherDetail} 
+                      onChange={handleChange} 
+                      disabled={isLoading}
+                      className="w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed"
+                    >
                       <option value="" disabled>เลือกลักษณะรายการ</option>
                       <option value="Deposit">Deposit</option>
                       <option value="Withholding Deposit">Withholding Deposit</option>
@@ -279,7 +336,11 @@ function PaymentInput() {
             </div>
 
             <div className="flex justify-center mt-6">
-              <button onClick={handleNext} disabled={isLoading} className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-16 rounded shadow-md transition-transform active:scale-95 text-lg disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed">
+              <button 
+                onClick={handleNext} 
+                disabled={isLoading} 
+                className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-16 rounded shadow-md transition-transform active:scale-95 text-lg disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
+              >
                 Next
               </button>
             </div>
@@ -288,7 +349,7 @@ function PaymentInput() {
         </div>
       </div>
 
-      {/* 🎯 ส่วนของ Custom Alert Popup */}
+      {/* 🎯 Custom Alert Popup คงไว้เพื่อดักจับ Validation ต่างๆ ในฟอร์ม */}
       {alertData.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">

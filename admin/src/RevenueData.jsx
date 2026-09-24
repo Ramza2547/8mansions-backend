@@ -89,8 +89,8 @@ function RevenueData() {
   
   const [isUnsaved, setIsUnsaved] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false); 
+  const [isSaving, setIsSaving] = useState(false); // 🌟 เพิ่ม State สำหรับระบบ Loading[cite: 6]
 
-  // 🎯 เพิ่ม State สำหรับจัดการ Popup จำลองกราฟ
   const [showChartModal, setShowChartModal] = useState(false);
 
   const pdfRef = useRef(null);
@@ -184,6 +184,7 @@ function RevenueData() {
   };
 
   const handleSaveData = async () => {
+    setIsSaving(true); // 🌟 เปิด Loading ทันทีที่คลิก
     const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0 };
     try {
       const payload = {
@@ -224,6 +225,8 @@ function RevenueData() {
     } catch (error) {
       console.error("บันทึกข้อมูลไม่สำเร็จ:", error);
       alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`);
+    } finally {
+      setIsSaving(false); // 🌟 ปิด Loading เสมอแม้เกิด Error
     }
   };
 
@@ -259,13 +262,11 @@ function RevenueData() {
     html2pdf().set(opt).from(element).save();
   };
 
-// 🎯 อัปเดตฟังก์ชันเพื่อเปิดหน้ากราฟ
   const handleViewChart = () => {
     if (isUnsaved) {
       alert("กรุณากดปุ่ม Save Data เพื่อบันทึกล่าสุดก่อนสร้างกราฟครับ!");
       return;
     }
-    // เปลี่ยนไปหน้า Data Visualization
     navigate('/admin/dataviz'); 
   };
 
@@ -733,17 +734,37 @@ function RevenueData() {
 
           {!isYearlyView && (
             <div className="flex items-center gap-3 mt-4 px-4">
+              {/* 🌟 1. ปุ่ม Save Data พร้อมระบบ Progress แบบใหม่[cite: 6] */}
               <button 
                 onClick={handleSaveData}
-                disabled={!isUnsaved}
-                className={`px-6 py-2.5 font-bold rounded shadow-md transition-all duration-300 flex items-center gap-2 ${
-                  isUnsaved 
-                    ? 'bg-[#3b5998] hover:bg-[#2d4373] text-white' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                disabled={!isUnsaved || isSaving}
+                className={`px-6 py-2.5 font-bold rounded shadow-md transition-all duration-300 flex items-center gap-2 relative overflow-hidden ${
+                  isSaving 
+                    ? 'bg-[#2d4373] text-gray-200 cursor-wait' 
+                    : isUnsaved 
+                      ? 'bg-[#3b5998] hover:bg-[#2d4373] text-white active:scale-95' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                Save Data (คลิกเพื่อบันทึก)
+                {/* 🌟 2. เอฟเฟกต์แสงกระพริบเบาๆ (Pulse Background) ตอนกำลังบันทึก */}
+                {isSaving && (
+                  <div className="absolute inset-0 bg-[#3b5998]/20 flex items-center justify-center">
+                     <div className="w-full h-full bg-white/20 animate-pulse"></div>
+                  </div>
+                )}
+                
+                {/* 🌟 3. สลับไอคอน Spinner ตามสถานะ */}
+                {isSaving ? (
+                  <svg className="w-5 h-5 animate-spin text-white relative z-10" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                )}
+                
+                {/* 🌟 4. ข้อความปุ่มเปลี่ยนตามสถานะ */}
+                <span className="relative z-10">{isSaving ? 'กำลังบันทึกข้อมูล...' : 'Save Data (คลิกเพื่อบันทึก)'}</span>
               </button>
 
               {saveSuccess && (

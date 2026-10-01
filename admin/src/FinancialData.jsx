@@ -142,6 +142,8 @@ function FinancialData() {
             pea: Number(item.pea_cost) || 0, 
             pwa: Number(item.pwa_cost) || 0,
             internet: Number(item.internet_cost) || 0, 
+            washingMachineEnabled: Number(item.washing_machine_income) > 0, 
+            washingMachineAmount: Number(item.washing_machine_income) || 0, 
             custom_expenses: parsedCustom
           };
         });
@@ -176,7 +178,7 @@ function FinancialData() {
 
   const handleUtilityChange = (type, value) => {
     const finalValue = (type === 'other_remark') ? value : (Number(value) || 0);
-    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0, internet: 0, custom_expenses: [] };
+    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
     setUtilityCosts({
       ...utilityCosts,
       [filterMonth]: { ...currentMonthData, [type]: finalValue }
@@ -184,8 +186,22 @@ function FinancialData() {
     setIsUnsaved(true); setSaveSuccess(false); 
   };
 
+  const handleWashingMachineToggle = (e) => {
+    const isChecked = e.target.checked;
+    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
+    setUtilityCosts({
+      ...utilityCosts,
+      [filterMonth]: { 
+        ...currentMonthData, 
+        washingMachineEnabled: isChecked,
+        washingMachineAmount: isChecked ? currentMonthData.washingMachineAmount : 0 
+      }
+    });
+    setIsUnsaved(true); setSaveSuccess(false);
+  };
+
   const handleAddCustomExpense = (month) => {
-    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, custom_expenses: [] };
+    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
     const newExpenses = [...(currentMonthData.custom_expenses || []), { id: Date.now().toString(), detail: '', amount: '' }];
     setUtilityCosts({
       ...utilityCosts,
@@ -195,7 +211,7 @@ function FinancialData() {
   };
 
   const handleUpdateCustomExpense = (month, id, field, value) => {
-    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, custom_expenses: [] };
+    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
     const updatedExpenses = (currentMonthData.custom_expenses || []).map(exp => 
       exp.id === id ? { ...exp, [field]: value } : exp
     );
@@ -207,7 +223,7 @@ function FinancialData() {
   };
 
   const handleRemoveCustomExpense = (month, id) => {
-    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, custom_expenses: [] };
+    const currentMonthData = utilityCosts[month] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
     const updatedExpenses = (currentMonthData.custom_expenses || []).filter(exp => exp.id !== id);
     setUtilityCosts({
       ...utilityCosts,
@@ -218,13 +234,14 @@ function FinancialData() {
 
   const handleSaveData = async () => {
     setIsSaving(true);
-    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0, internet: 0, custom_expenses: [] };
+    const currentMonthData = utilityCosts[filterMonth] || { pea: 0, pwa: 0, internet: 0, washingMachineEnabled: false, washingMachineAmount: 0, custom_expenses: [] };
     try {
       const payload = {
         billingMonth: filterMonth,
         pea_cost: currentMonthData.pea,
         pwa_cost: currentMonthData.pwa,
         internet_cost: currentMonthData.internet, 
+        washing_machine_income: currentMonthData.washingMachineAmount || 0, 
         custom_expenses: JSON.stringify(currentMonthData.custom_expenses) 
       };
 
@@ -280,13 +297,14 @@ function FinancialData() {
     const element = pdfRef.current;
     const filename = `8Mansions_Financial_${filterMonth.replace(/\s+/g, '_')}.pdf`;
     
-    // 🌟 แก้ไข: ลด Margin ด้านล่างสุด (Bottom margin) จาก 0.3 นิ้ว เหลือ 0.1 นิ้ว
+    // 🌟 แก้ไข: เพิ่มออปชั่น pagebreak: { mode: ['css', 'legacy'] } เพื่อให้ html2pdf ไม่ตัดกลางตาราง
     const opt = {
-      margin: [0.3, 0.3, 0.1, 0.3], // [Top, Right, Bottom, Left]
+      margin: [0.3, 0.3, 0.3, 0.3], 
       filename: filename, 
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, scrollX: 0, scrollY: 0 }, 
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } 
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
     };
     html2pdf().set(opt).from(element).save();
   };
@@ -300,11 +318,14 @@ function FinancialData() {
   const yearStr = filterMonth.split('-')[0];
 
   let displayInvoices = [];
+  
   let currentPea = 0;
   let currentPwa = 0;
   let currentInternet = 0; 
   let currentCustomTotal = 0;
   let currentCustomList = [];
+  let currentWashingMachineTotal = 0;
+  let currentWashingMachineEnabled = false;
 
   if (isYearlyView) {
     const yearlyPaidInvoices = invoices.filter(inv => inv.billingMonth.includes(yearStr) && inv.isPaid);
@@ -329,6 +350,7 @@ function FinancialData() {
         currentPea += utilityCosts[monthKey].pea || 0;
         currentPwa += utilityCosts[monthKey].pwa || 0;
         currentInternet += utilityCosts[monthKey].internet || 0; 
+        currentWashingMachineTotal += utilityCosts[monthKey].washingMachineAmount || 0;
         const arr = utilityCosts[monthKey].custom_expenses || [];
         currentCustomTotal += arr.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       }
@@ -339,13 +361,16 @@ function FinancialData() {
     currentPea = utilityCosts[filterMonth]?.pea || 0;
     currentPwa = utilityCosts[filterMonth]?.pwa || 0;
     currentInternet = utilityCosts[filterMonth]?.internet || 0; 
+    currentWashingMachineEnabled = utilityCosts[filterMonth]?.washingMachineEnabled || false;
+    currentWashingMachineTotal = utilityCosts[filterMonth]?.washingMachineAmount || 0;
     currentCustomList = utilityCosts[filterMonth]?.custom_expenses || [];
     currentCustomTotal = currentCustomList.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }
 
   const allInvoicesForPeriod = isYearlyView ? invoices.filter(inv => inv.billingMonth.includes(yearStr)) : displayInvoices;
-  const grandTotalExpected = allInvoicesForPeriod.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
-  const totalCollected = allInvoicesForPeriod.filter(inv => inv.isPaid).reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+  
+  const grandTotalExpected = allInvoicesForPeriod.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0) + currentWashingMachineTotal;
+  const totalCollected = allInvoicesForPeriod.filter(inv => inv.isPaid).reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0) + currentWashingMachineTotal;
   const totalPending = grandTotalExpected - totalCollected;
 
   const paidDisplayInvoices = displayInvoices.filter(inv => inv.isPaid);
@@ -356,7 +381,9 @@ function FinancialData() {
   const tableGrandTotal = paidDisplayInvoices.reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0); 
   const tableOther = tableGrandTotal - tableRental - tableElectric - tableWater; 
 
+  const totalIncomeCollected = tableGrandTotal + currentWashingMachineTotal;
   const totalExpenses = currentPea + currentPwa + currentInternet + currentCustomTotal;
+  const finalWebProfit = totalIncomeCollected - totalExpenses;
 
   const isAllPaid = !isYearlyView && displayInvoices.length > 0 && displayInvoices.every(inv => inv.isPaid);
 
@@ -373,8 +400,6 @@ function FinancialData() {
     else if (lower.includes('refund')) prefix = '(Rf) '; 
     return `${prefix}${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
   };
-
-  const finalWebProfit = tableGrandTotal - totalExpenses;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans pb-10 relative">
@@ -397,11 +422,10 @@ function FinancialData() {
       </nav>
 
       {/* ==============================================
-          🎯 แม่แบบ PDF (Financial Statement)
+          🎯 แม่แบบ PDF (Financial Statement) - เพิ่มคำสั่งป้องกันการตัดครึ่งตาราง
           ============================================== */}
       <div className="absolute top-[-9999px] left-0 z-[-1]">
-        {/* 🌟 แก้ไข: ลด Padding ด้านล่างจาก p-12 เป็น px-10 pt-10 pb-4 เพื่อไม่ให้ดันกระดาษเกิน */}
-        <div ref={pdfRef} className="w-[794px] bg-white px-10 pt-10 pb-4 text-[#1A1A1A] font-sans mx-auto">
+        <div ref={pdfRef} className="w-[720px] bg-white px-8 pt-8 pb-4 text-[#1A1A1A] font-sans mx-auto">
           
           <div className="flex justify-between items-end border-b-[3px] border-gray-800 pb-4 mb-6">
             <div>
@@ -419,7 +443,7 @@ function FinancialData() {
           </div>
           
           <table className="w-full text-left border-collapse mb-8 text-[12px] border-y-2 border-gray-400">
-            <thead>
+            <thead style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100 text-gray-700 border-b-2 border-gray-400">
                 <th className="py-3 px-3 font-extrabold w-[12%]">Room</th>
                 <th className="py-3 px-3 font-bold text-right w-[17%]">Rental (THB)</th>
@@ -429,7 +453,7 @@ function FinancialData() {
                 <th className="py-3 px-3 font-extrabold text-right w-[20%] text-black">Total (THB)</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ pageBreakInside: 'avoid' }}>
               {paidDisplayInvoices.length === 0 ? (
                 <tr><td colSpan="6" className="py-6 text-center text-gray-400 italic text-sm">No paid invoices available.</td></tr>
               ) : (
@@ -439,7 +463,7 @@ function FinancialData() {
                     <tr key={idx} className="border-b border-gray-200">
                       <td className="py-2.5 px-3 font-extrabold text-gray-800">{inv.room}</td>
                       <td className="py-2.5 px-3 text-right text-gray-700">
-                        {currentRemark && currentRemark !== '-' && (
+                        {!isYearlyView && currentRemark && currentRemark !== '-' && (
                           <span className="block text-[9px] text-gray-400 leading-none mb-0.5">({currentRemark})</span>
                         )}
                         {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
@@ -456,7 +480,7 @@ function FinancialData() {
               )}
             </tbody>
             {paidDisplayInvoices.length > 0 && (
-              <tfoot>
+              <tfoot style={{ pageBreakInside: 'avoid' }}>
                 <tr className="bg-gray-50 border-t-2 border-gray-400 text-gray-800 font-bold">
                   <td className="py-3 px-3 text-[12px]">TOTAL</td>
                   <td className="py-3 px-3 text-right">{tableRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
@@ -469,22 +493,24 @@ function FinancialData() {
             )}
           </table>
 
-          <div className="font-extrabold text-[13px] mb-3 uppercase flex items-center gap-2 text-[#2C3E50]">
+          <div className="font-extrabold text-[13px] mb-3 uppercase flex items-center gap-2 text-[#2C3E50]" style={{ pageBreakInside: 'avoid' }}>
             <div className="w-1.5 h-4 bg-[#F39C12] rounded-full"></div>
             2. Profit & Loss Statement (สรุปรายรับ-รายจ่าย)
           </div>
           
           <table className="w-full text-left border-collapse mb-6 text-[12px] border-y-2 border-gray-400">
-            <thead>
+            <thead style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100 text-gray-700 border-b-2 border-gray-400">
                 <th className="py-3 px-3 font-extrabold w-[50%]">Description</th>
                 <th className="py-3 px-3 font-bold text-right w-[25%] text-green-700">Income (THB)</th>
                 <th className="py-3 px-3 font-bold text-right w-[25%] text-red-600">Expenses (THB)</th>
               </tr>
             </thead>
-            <tbody>
+            
+            {/* 🌟 จัดกลุ่ม A. Total Collected Income ให้อยู่ก้อนเดียวกัน ไม่โดนหั่น */}
+            <tbody style={{ pageBreakInside: 'avoid' }}>
               <tr>
-                 <td colSpan="3" className="py-2 px-3 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
+                 <td colSpan="3" className="py-2.5 px-3 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
                    A. Total Collected Income
                  </td>
               </tr>
@@ -503,14 +529,22 @@ function FinancialData() {
                 <td className="py-2.5 px-3 text-right text-green-700">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
               </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2.5 px-3 text-gray-700 font-medium">Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)</td>
+                <td className="py-2.5 px-3 text-right text-green-700">{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-gray-300">-</td>
+              </tr>
               <tr className="border-b-2 border-gray-300 bg-green-50/30">
                 <td className="py-2.5 px-3 text-right font-extrabold text-gray-800">Total Income</td>
-                <td className="py-2.5 px-3 text-right font-black text-[13px] text-green-700">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right font-black text-[13px] text-green-700">{totalIncomeCollected.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td className="py-2.5 px-3 text-right"></td>
               </tr>
+            </tbody>
 
+            {/* 🌟 จัดกลุ่ม B. Landlord Expenses ให้อยู่ก้อนเดียวกัน ไม่โดนหั่น */}
+            <tbody style={{ pageBreakInside: 'avoid' }}>
               <tr>
-                 <td colSpan="3" className="py-2 px-3 mt-1 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
+                 <td colSpan="3" className="py-2.5 px-3 mt-1 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
                    B. Landlord Expenses (Actual Costs)
                  </td>
               </tr>
@@ -552,7 +586,8 @@ function FinancialData() {
               </tr>
             </tbody>
 
-            <tfoot>
+            {/* 🌟 ให้อัตรากำไร (Net Profit) ไม่ถูกหั่นครึ่ง */}
+            <tfoot style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100">
                 <td colSpan="2" className="py-4 px-3 text-right font-black text-[14px] uppercase tracking-widest text-[#1A1A1A]">
                   Net Profit (กำไรสุทธิ)
@@ -564,8 +599,8 @@ function FinancialData() {
             </tfoot>
           </table>
 
-          {/* 🌟 แก้ไข: ลดความสูงของ Margin ด้านบนให้กระชับขึ้น */}
-          <div className="flex flex-col items-end mt-2 text-[#2C3E50]">
+          {/* 🌟 ให้ข้อความหมายเหตุด้านล่างสุดไม่ถูกหั่นครึ่ง */}
+          <div className="flex flex-col items-end mt-2 text-[#2C3E50]" style={{ pageBreakInside: 'avoid' }}>
             <p className="font-black italic text-[15px] tracking-wide mb-1">" {THBText(finalWebProfit)} "</p>
             <p className="font-black italic text-[13px] text-gray-500 tracking-widest uppercase">" {ENGText(finalWebProfit)} "</p>
           </div>
@@ -609,7 +644,7 @@ function FinancialData() {
 
         {/* Income Table */}
         <div className="bg-white rounded-xl shadow-xl overflow-hidden mb-8">
-          <div className="bg-[#8FAFC1] text-white py-3 px-6 font-extrabold tracking-wider uppercase">1. Tenant Income Details</div>
+          <div className="bg-[#8FAFC1] text-white py-3 px-6 font-extrabold tracking-wider uppercase">Tenant Income Details</div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="bg-gray-100 text-gray-700 border-b-2 border-gray-200">
@@ -645,7 +680,9 @@ function FinancialData() {
                       <tr key={inv.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-gray-50/50' : 'bg-white'} hover:bg-yellow-50/50 transition-colors`}>
                         <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
                         <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
-                          {webRemark && webRemark !== '-' && <span className="text-[11px] text-gray-400 mr-1 font-medium">({webRemark})</span>}
+                          {!isYearlyView && webRemark && webRemark !== '-' && (
+                            <span className="text-[11px] text-gray-400 mr-1 font-medium">({webRemark})</span>
+                          )}
                           {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
@@ -702,89 +739,119 @@ function FinancialData() {
           </h2>
 
           {!isYearlyView && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8">
-              <h3 className="font-extrabold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">Record Landlord Expenses</h3>
-              
-              <div className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5 mb-4">
+                <h3 className="font-extrabold text-green-800 mb-4 uppercase tracking-wider text-sm border-b border-green-200 pb-2">Record Additional Income</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">PEA Cost</label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={currentWashingMachineEnabled} 
+                        onChange={handleWashingMachineToggle} 
+                        className="w-4 h-4 accent-green-600" 
+                      />
+                      Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)
+                    </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">⚡</span>
-                      <input type="number" value={currentPea || ''} onChange={(e) => handleUtilityChange('pea', e.target.value)} placeholder="บิลค่าไฟ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F1C40F] outline-none transition-shadow" />
+                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">🪙</span>
+                      <input 
+                        type="number" 
+                        value={currentWashingMachineTotal || ''} 
+                        onChange={(e) => handleUtilityChange('washingMachineAmount', e.target.value)} 
+                        disabled={!currentWashingMachineEnabled} 
+                        placeholder="รายรับจากเครื่องซักผ้า..." 
+                        className={`w-full pl-9 p-2.5 border border-gray-300 rounded-lg outline-none transition-shadow ${!currentWashingMachineEnabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white focus:ring-2 focus:ring-[#27AE60]'}`} 
+                      />
                     </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">PWA Cost</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">💧</span>
-                      <input type="number" value={currentPwa || ''} onChange={(e) => handleUtilityChange('pwa', e.target.value)} placeholder="บิลค่าน้ำ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">Internet Cost</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">🌐</span>
-                      <input type="number" value={currentInternet || ''} onChange={(e) => handleUtilityChange('internet', e.target.value)} placeholder="บิลค่าอินเตอร์เน็ต..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9B59B6] outline-none transition-shadow" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-2 border-t pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="block text-xs font-bold text-gray-500 uppercase">Other Expenses (ค่าใช้จ่ายอื่นๆ)</label>
-                    <button 
-                      onClick={() => handleAddCustomExpense(filterMonth)} 
-                      className="text-sm font-extrabold text-[#3498DB] hover:text-[#2980B9] flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded shadow-sm hover:bg-blue-100 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg>
-                      Add Item
-                    </button>
-                  </div>
-                  
-                  <div className="flex flex-col gap-3">
-                    {currentCustomList.length === 0 && (
-                      <div className="text-center py-4 bg-white border border-dashed border-gray-300 rounded-lg text-gray-400 text-sm">
-                        ไม่มีค่าใช้จ่ายอื่นๆ ในเดือนนี้ (คลิก Add Item เพื่อเพิ่มรายการ)
-                      </div>
-                    )}
-                    {currentCustomList.map((exp, index) => (
-                      <div key={exp.id} className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex-1 relative">
-                          <span className="absolute left-3 top-2.5 font-bold text-gray-400">✏️</span>
-                          <input 
-                            type="text" 
-                            value={exp.detail} 
-                            onChange={(e) => handleUpdateCustomExpense(filterMonth, exp.id, 'detail', e.target.value)} 
-                            placeholder="Detail (เช่น ค่าส่วนกลาง, ซ่อมแอร์)..." 
-                            className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" 
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 sm:w-1/3">
-                          <div className="relative flex-1">
-                            <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
-                            <input 
-                              type="number" 
-                              value={exp.amount} 
-                              onChange={(e) => handleUpdateCustomExpense(filterMonth, exp.id, 'amount', e.target.value)} 
-                              placeholder="Amount..." 
-                              className="w-full pl-8 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" 
-                            />
-                          </div>
-                          <button 
-                            onClick={() => handleRemoveCustomExpense(filterMonth, exp.id)} 
-                            className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-                            title="Remove"
-                          >
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
-            </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-8">
+                <h3 className="font-extrabold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">Record Landlord Expenses</h3>
+                
+                <div className="flex flex-col gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase">PEA Cost</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">⚡</span>
+                        <input type="number" value={currentPea || ''} onChange={(e) => handleUtilityChange('pea', e.target.value)} placeholder="บิลค่าไฟ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F1C40F] outline-none transition-shadow" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase">PWA Cost</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">💧</span>
+                        <input type="number" value={currentPwa || ''} onChange={(e) => handleUtilityChange('pwa', e.target.value)} placeholder="บิลค่าน้ำ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase">Internet Cost</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">🌐</span>
+                        <input type="number" value={currentInternet || ''} onChange={(e) => handleUtilityChange('internet', e.target.value)} placeholder="บิลค่าอินเตอร์เน็ต..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9B59B6] outline-none transition-shadow" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 border-t pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase">Other Expenses (ค่าใช้จ่ายอื่นๆ)</label>
+                      <button 
+                        onClick={() => handleAddCustomExpense(filterMonth)} 
+                        className="text-sm font-extrabold text-[#3498DB] hover:text-[#2980B9] flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded shadow-sm hover:bg-blue-100 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg>
+                        Add Item
+                      </button>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      {currentCustomList.length === 0 && (
+                        <div className="text-center py-4 bg-white border border-dashed border-gray-300 rounded-lg text-gray-400 text-sm">
+                          ไม่มีค่าใช้จ่ายอื่นๆ ในเดือนนี้ (คลิก Add Item เพื่อเพิ่มรายการ)
+                        </div>
+                      )}
+                      {currentCustomList.map((exp, index) => (
+                        <div key={exp.id} className="flex flex-col sm:flex-row gap-3">
+                          <div className="flex-1 relative">
+                            <span className="absolute left-3 top-2.5 font-bold text-gray-400">✏️</span>
+                            <input 
+                              type="text" 
+                              value={exp.detail} 
+                              onChange={(e) => handleUpdateCustomExpense(filterMonth, exp.id, 'detail', e.target.value)} 
+                              placeholder="Detail (เช่น ค่าส่วนกลาง, ซ่อมแอร์)..." 
+                              className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" 
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 sm:w-1/3">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
+                              <input 
+                                type="number" 
+                                value={exp.amount} 
+                                onChange={(e) => handleUpdateCustomExpense(filterMonth, exp.id, 'amount', e.target.value)} 
+                                placeholder="Amount..." 
+                                className="w-full pl-8 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" 
+                              />
+                            </div>
+                            <button 
+                              onClick={() => handleRemoveCustomExpense(filterMonth, exp.id)} 
+                              className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                              title="Remove"
+                            >
+                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           <div className="overflow-x-auto">
@@ -811,6 +878,11 @@ function FinancialData() {
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 font-bold whitespace-nowrap">Water Collection</td>
                   <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-bold whitespace-nowrap">Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)</td>
+                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
                 </tr>
 
@@ -851,7 +923,7 @@ function FinancialData() {
               <tfoot className="bg-[#1A1A1A] text-white">
                 <tr>
                   <td className="py-5 px-4 font-black uppercase text-lg tracking-widest whitespace-nowrap">Net Profit (กำไรสุทธิ)</td>
-                  <td className="py-5 px-4 text-right font-bold text-gray-400 whitespace-nowrap">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-5 px-4 text-right font-bold text-gray-400 whitespace-nowrap">{totalIncomeCollected.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-5 px-4 text-right font-bold text-red-400 whitespace-nowrap">- {totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="bg-[#0f0f0f]">

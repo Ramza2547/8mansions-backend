@@ -88,7 +88,7 @@ function PaymentInput() {
       setStatusMessage('เซิร์ฟเวอร์ยังไม่ตอบสนอง... กำลังเริ่มดึงข้อมูลใหม่');
       retryCount.current += 1;
       
-      // 🌟 Auto-Retry ในอีก 3 วินาที
+      // Auto-Retry ในอีก 3 วินาที
       setTimeout(() => fetchCustomers(), 3000);
     }
   };
@@ -153,7 +153,8 @@ function PaymentInput() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#EAEAEA] font-sans relative">
+    <div className="flex flex-col min-h-screen bg-[#F4F7F9] font-sans relative">
+      {/* 🟢 Navbar แบบ Responsive (ไม่ได้แก้ไข คงเดิม 100%) */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
@@ -171,19 +172,21 @@ function PaymentInput() {
         </div>
       </nav>
 
-      <div className="flex-1 flex justify-center items-center py-8 sm:py-10 px-4">
-        {/* 🌟 ใส่ relative และ overflow-hidden ให้ตัว Loading บังฟอร์มพอดี */}
-        <div className="w-full max-w-3xl bg-white sm:bg-transparent p-4 sm:p-0 rounded-lg shadow-sm sm:shadow-none relative overflow-hidden min-h-[450px]">
+      {/* 🔵 Content Area */}
+      <div className="flex-1 flex justify-center items-start py-8 sm:py-12 px-4 animate-fade-in">
+        
+        {/* 🌟 1. UI ส่วนของการ์ดฟอร์ม (White Card) */}
+        <div className="w-full max-w-3xl bg-white p-6 sm:p-10 rounded-2xl shadow-xl border border-gray-100 relative overflow-hidden min-h-[450px]">
           
           {/* 🌟 UI ส่วนของ Auto-Retry Loading */}
           {isLoading && (
-            <div className="absolute inset-0 bg-[#EAEAEA]/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg shadow-sm border border-gray-200">
+            <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center py-10 rounded-2xl">
               <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
               <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2">{statusMessage}</h3>
               
-              <div className="w-64 bg-gray-300 rounded-full h-2.5 my-3">
+              <div className="w-64 bg-gray-200 rounded-full h-2.5 my-3 overflow-hidden">
                 <div 
-                  className="bg-[#2C3E50] h-2.5 rounded-full transition-all duration-500 ease-out" 
+                  className="bg-[#2C3E50] h-full rounded-full transition-all duration-500 ease-out" 
                   style={{ width: `${loadProgress}%` }}
                 ></div>
               </div>
@@ -197,92 +200,106 @@ function PaymentInput() {
             </div>
           )}
 
-          <div className="flex flex-col gap-4 sm:gap-5 w-full max-w-xl mx-auto">
+          {/* 🌟 2. Form Header */}
+          <div className="mb-8 border-b border-gray-100 pb-5">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A] flex items-center gap-3">
+              <div className="p-2 bg-[#8FAFC1]/20 rounded-lg text-[#2C3E50]">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              </div>
+              Create Payment Invoice
+            </h2>
+            <p className="text-gray-500 mt-2 text-sm sm:text-base">Please fill in the billing details for the selected room carefully.</p>
+          </div>
+
+          <div className="flex flex-col gap-5 sm:gap-6 w-full max-w-2xl mx-auto">
             
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className="text-gray-700 font-medium text-sm sm:text-base">Choose Room</label>
+            {/* Section 1: Room & Resident Info */}
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+              <label className="text-gray-800 font-bold text-sm sm:text-base">Choose Room</label>
               <select 
                 value={formData.room} 
                 onChange={handleRoomChange} 
                 disabled={isLoading}
-                className="w-full p-2 bg-gray-50 sm:bg-white border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] disabled:bg-gray-200 disabled:cursor-not-allowed"
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm text-gray-800 font-medium"
               >
-                <option value="" disabled>เลือกห้อง</option>
+                <option value="" disabled>-- Select a room --</option>
                 {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} - {r.name}</option>)}
               </select>
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className="text-gray-700 font-medium text-sm sm:text-base">Name</label>
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+              <label className="text-gray-800 font-bold text-sm sm:text-base">Resident Name</label>
               <input 
                 type="text" 
                 value={formData.name} 
                 readOnly 
                 disabled={isLoading}
-                className="w-full p-2 bg-gray-200 border border-gray-300 rounded cursor-not-allowed" 
+                placeholder="Auto-filled name"
+                className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed text-gray-600 font-medium" 
               />
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className="text-red-600 font-bold text-sm sm:text-base">Due Date (ครบกำหนด)</label>
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+              <label className="text-red-600 font-extrabold text-sm sm:text-base">Due Date (ครบกำหนด)</label>
               <div className="relative w-full">
                 <DatePicker
                   selected={getValidDate(formData.dueDate)}
                   onChange={handleDateChange}
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="วว / ดด / ปปปป"
+                  placeholderText="DD / MM / YYYY"
                   disabled={isLoading}
-                  className="w-full p-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none disabled:bg-gray-200 disabled:cursor-not-allowed"
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm font-medium"
                   wrapperClassName="w-full"
                 />
-                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-400 absolute right-4 top-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
               </div>
             </div>
 
-            <div className="mt-2 sm:mt-4 p-3 sm:p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-              <label className="flex items-center gap-3 text-gray-800 font-bold cursor-pointer mb-2 sm:mb-4 text-sm sm:text-base">
+            {/* 🌟 3. Add Other Box (ปรับใหม่ให้พรีเมียมขึ้น) */}
+            <div className="mt-2 p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] border border-[#e2e8f0] rounded-xl shadow-sm transition-all duration-300">
+              <label className="flex items-center gap-3 text-[#1e293b] font-bold cursor-pointer text-sm sm:text-base select-none">
                 <input 
                   type="checkbox" 
                   checked={formData.hasOther} 
                   onChange={handleOtherCheck} 
                   disabled={isLoading}
-                  className="w-4 h-4 sm:w-5 sm:h-5 disabled:cursor-not-allowed" 
+                  className="w-5 h-5 accent-[#3b82f6] cursor-pointer rounded disabled:cursor-not-allowed" 
                 />
                 Add Other (เพิ่มรายการอื่นๆ)
               </label>
 
               {formData.hasOther && (
-                <div className="flex flex-col gap-3 sm:gap-4 mt-3 animate-fade-in-up">
-                  <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-                    <label className="text-gray-700 font-medium text-sm sm:text-base">Other Detail</label>
+                <div className="flex flex-col gap-4 mt-5 pt-4 border-t border-[#cbd5e1] animate-fade-in-up">
+                  <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                    <label className="text-[#334155] font-bold text-sm sm:text-base">Other Detail</label>
                     <select 
                       name="otherDetail" 
                       value={formData.otherDetail} 
                       onChange={handleChange} 
                       disabled={isLoading}
-                      className="w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed"
+                      className="w-full p-3 bg-white border border-[#cbd5e1] rounded-lg outline-none focus:ring-2 focus:ring-[#3b82f6] transition-all disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm"
                     >
-                      <option value="" disabled>เลือกลักษณะรายการ</option>
+                      <option value="" disabled>-- เลือกลักษณะรายการ --</option>
                       <option value="Deposit">Deposit</option>
                       <option value="Withholding Deposit">Withholding Deposit</option>
                       <option value="Outstanding Payment">Outstanding Payment</option>
                       <option value="Refund">Refund </option>
                     </select>
                   </div>
-                  <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-                    <label className="text-gray-700 font-medium text-sm sm:text-base">Amount (THB)</label>
+                  <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                    <label className="text-[#334155] font-bold text-sm sm:text-base">Amount (THB)</label>
                     <div className="relative w-full">
-                      {isRefund && <span className="absolute left-3 top-2.5 font-bold text-red-600">-</span>}
+                      {isRefund && <span className="absolute left-3 top-3.5 font-extrabold text-red-600">-</span>}
                       <input 
                         type="number" 
                         name="otherAmount" 
                         value={formData.otherAmount} 
                         onChange={handleChange} 
                         disabled={isLoading}
-                        className={`w-full p-2 bg-white border border-gray-300 rounded outline-none disabled:bg-gray-200 disabled:cursor-not-allowed ${isRefund ? 'pl-6 text-red-600 font-bold' : ''}`} 
-                        placeholder="ระบุจำนวนเงิน (THB)" 
+                        className={`w-full p-3 bg-white border border-[#cbd5e1] rounded-lg outline-none focus:ring-2 focus:ring-[#3b82f6] transition-all disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm ${isRefund ? 'pl-7 text-red-600 font-bold' : ''}`} 
+                        placeholder="ระบุจำนวนเงิน..." 
                       />
                     </div>
                   </div>
@@ -290,8 +307,11 @@ function PaymentInput() {
               )}
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4 mt-2">
-              <label className={`font-medium text-sm sm:text-base ${disableRoomRental ? 'text-gray-400' : 'text-gray-700'}`}>Room Rental (THB)</label>
+            {/* Section Divider */}
+            <hr className="border-gray-100 my-2" />
+
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+              <label className={`font-bold text-sm sm:text-base ${disableRoomRental ? 'text-gray-400' : 'text-gray-800'}`}>Room Rental (THB)</label>
               <div className="flex gap-2 w-full">
                 {isRefund && (
                   <input 
@@ -300,8 +320,8 @@ function PaymentInput() {
                     value={disableRoomRental ? '' : formData.roomRentalRemark} 
                     onChange={handleChange} 
                     disabled={disableRoomRental || isLoading} 
-                    placeholder="Detail" 
-                    className={`w-1/2 p-2 border rounded outline-none text-sm ${disableRoomRental || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                    placeholder="Remark..." 
+                    className={`w-1/2 p-3 border rounded-xl outline-none text-sm transition-all shadow-sm ${disableRoomRental || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white'}`} 
                   />
                 )}
                 <input 
@@ -310,38 +330,52 @@ function PaymentInput() {
                   value={disableRoomRental ? '' : formData.roomRental} 
                   onChange={handleChange} 
                   disabled={disableRoomRental || isLoading} 
-                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-2 border rounded outline-none ${disableRoomRental || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} 
+                  placeholder="ยอดค่าเช่า..."
+                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-3 border rounded-xl outline-none transition-all shadow-sm font-medium ${disableRoomRental || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white'}`} 
                 />
               </div>
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>Old Electric meter (Unit)</label>
-              <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+            {/* Utility Meters */}
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 flex flex-col gap-4 mt-2">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                <label className={`font-bold text-sm sm:text-base flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>
+                  ⚡ Old Electric (Unit)
+                </label>
+                <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                <label className={`font-bold text-sm sm:text-base flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>
+                  ⚡ New Electric (Unit)
+                </label>
+                <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>New Electric meter (Unit)</label>
-              <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+            <div className="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100/50 flex flex-col gap-4">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                <label className={`font-bold text-sm sm:text-base flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>
+                  💧 Old Water (Unit)
+                </label>
+                <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
+                <label className={`font-bold text-sm sm:text-base flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>
+                  💧 New Water (Unit)
+                </label>
+                <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils || isLoading ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+              </div>
             </div>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>Old Water meter (Unit)</label>
-              <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
-            </div>
-
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-1 sm:gap-4">
-              <label className={`font-medium text-sm sm:text-base ${disableUtils ? 'text-gray-400' : 'text-gray-700'}`}>New Water meter (Unit)</label>
-              <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils || isLoading} className={`w-full p-2 border rounded outline-none ${disableUtils || isLoading ? 'bg-gray-200 border-gray-300 cursor-not-allowed' : 'bg-white border-gray-300 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
-            </div>
-
-            <div className="flex justify-center mt-6">
+            {/* 🌟 4. Next Button (ปรับให้ดูพรีเมียม กว้างขึ้น และมีแอนิเมชันตอนชี้) */}
+            <div className="flex justify-end mt-6">
               <button 
                 onClick={handleNext} 
                 disabled={isLoading} 
-                className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 px-16 rounded shadow-md transition-transform active:scale-95 text-lg disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto min-w-[200px] bg-[#2C3E50] hover:bg-black text-white font-extrabold py-3.5 px-10 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 text-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed"
               >
-                Next
+                Continue Review 
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               </button>
             </div>
 
@@ -349,7 +383,7 @@ function PaymentInput() {
         </div>
       </div>
 
-      {/* 🎯 Custom Alert Popup คงไว้เพื่อดักจับ Validation ต่างๆ ในฟอร์ม */}
+      {/* 🎯 Custom Alert Popup (คงเดิม) */}
       {alertData.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">

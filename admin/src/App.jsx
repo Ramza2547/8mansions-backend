@@ -13,10 +13,8 @@ import PaymentReview from './PaymentReview';
 import PaymentChecking from './PaymentChecking';
 import PaymentSuccess from './PaymentSuccess';
 import AdminFeedback from './AdminFeedback';
-import RevenueData from './RevenueData';
+import FinancialData from './FinancialData';
 import DataViz from './DataViz';
-
-// 🎯 1. อิมพอร์ตไฟล์หน้า Dashboard เข้ามา
 import AdminFeedbackDashboard from './AdminFeedbackDashboard'; 
 
 function App() {
@@ -36,10 +34,12 @@ function App() {
           <Route path="/admin/payment/checking" element={<PaymentChecking />} />
           <Route path="/admin/payment/success" element={<PaymentSuccess />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />
-          <Route path="/admin/revenue-data" element={<RevenueData />} />
+          
+          {/* 🌟 เปลี่ยน Route จาก revenue-data เป็น financial-data */}
+          <Route path="/admin/financial-data" element={<FinancialData />} />
+          
           <Route path="/admin/dataviz" element={<DataViz />} />
           <Route path="/admin/feedback/dashboard" element={<AdminFeedbackDashboard />} />
-
         </Routes>
       </GlobalLoader>
     </BrowserRouter>

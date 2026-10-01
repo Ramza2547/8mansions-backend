@@ -8,7 +8,6 @@ function PaymentInput() {
   const navigate = useNavigate();
   const [occupiedRooms, setOccupiedRooms] = useState([]);
   
-  // 🌟 State สำหรับ Auto-Retry Loading
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState(0);
   const [countdown, setCountdown] = useState(60);
@@ -28,7 +27,6 @@ function PaymentInput() {
   useEffect(() => {
     fetchCustomers();
     
-    // Cleanup intervals เมื่อออกจากหน้าเว็บ
     return () => {
       if (window.payInterval) clearInterval(window.payInterval);
       if (window.payCountdown) clearInterval(window.payCountdown);
@@ -41,18 +39,15 @@ function PaymentInput() {
     setCountdown(60);
     setStatusMessage(retryCount.current > 0 ? `กำลังลองเชื่อมต่อใหม่รอบที่ ${retryCount.current}...` : 'กำลังเตรียมรายชื่อห้องพัก...');
 
-    // วิ่งหลอดโหลด
     window.payInterval = setInterval(() => {
       setLoadProgress((prev) => (prev < 90 ? prev + Math.floor(Math.random() * 5) + 2 : prev));
     }, 1000);
 
-    // วิ่งเวลานับถอยหลัง
     window.payCountdown = setInterval(() => {
       setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
     try {
-      // ให้เวลาดึง 60 วิ
       const response = await axios.get('https://eightmansions-backend-1.onrender.com/api/customers/', { timeout: 60000 });
       
       clearInterval(window.payInterval);
@@ -77,9 +72,8 @@ function PaymentInput() {
         setOccupiedRooms(occupied);
       }
       
-      // หน่วงเวลาให้เห็นหลอด 100% สักแปปค่อยซ่อนหน้าจอโหลด
       setTimeout(() => setIsLoading(false), 800);
-      retryCount.current = 0; // รีเซ็ตตัวนับเมื่อสำเร็จ
+      retryCount.current = 0; 
       
     } catch (error) {
       clearInterval(window.payInterval);
@@ -88,7 +82,6 @@ function PaymentInput() {
       setStatusMessage('เซิร์ฟเวอร์ยังไม่ตอบสนอง... กำลังเริ่มดึงข้อมูลใหม่');
       retryCount.current += 1;
       
-      // Auto-Retry ในอีก 3 วินาที
       setTimeout(() => fetchCustomers(), 3000);
     }
   };
@@ -154,7 +147,6 @@ function PaymentInput() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F4F7F9] font-sans relative">
-      {/* 🟢 Navbar แบบ Responsive (ไม่ได้แก้ไข คงเดิม 100%) */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
@@ -172,35 +164,33 @@ function PaymentInput() {
         </div>
       </nav>
 
-      {/* 🔵 Content Area */}
-      <div className="flex-1 flex justify-center items-start py-8 sm:py-12 px-4 animate-fade-in">
+      <div className="flex-1 flex justify-center items-start py-8 sm:py-12 px-4 animate-fade-in relative">
         
-        {/* 🌟 1. UI ส่วนของการ์ดฟอร์ม (White Card) */}
-        <div className="w-full max-w-3xl bg-white p-6 sm:p-10 rounded-2xl shadow-xl border border-gray-100 relative overflow-hidden min-h-[450px]">
-          
-          {/* 🌟 UI ส่วนของ Auto-Retry Loading */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center py-10 rounded-2xl">
-              <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
-              <h3 className="text-xl font-extrabold text-[#2C3E50] mb-2">{statusMessage}</h3>
-              
-              <div className="w-64 bg-gray-200 rounded-full h-2.5 my-3 overflow-hidden">
-                <div 
-                  className="bg-[#2C3E50] h-full rounded-full transition-all duration-500 ease-out" 
-                  style={{ width: `${loadProgress}%` }}
-                ></div>
-              </div>
-              
-              <p className="text-[#1A1A1A] font-bold text-sm font-mono mt-1">
-                ใช้เวลาประมาณ: <span className="text-red-600">{countdown}</span> วินาที
-              </p>
-              <p className="text-gray-500 font-medium text-center px-4 text-[11px] mt-4">
-                (ระบบจะพยายามเชื่อมต่อใหม่อัตโนมัติ โดยไม่ต้องรีเฟรชหน้าเว็บ)
-              </p>
+        {/* 🌟 1. UI ส่วนของ Auto-Retry Loading (แก้ไขเป็น fixed ล็อกกลางจอ) */}
+        {isLoading && (
+          <div className="fixed inset-0 top-[60px] z-[100] flex flex-col items-center justify-center pb-[15vh] bg-[#F4F7F9]/95 backdrop-blur-sm">
+            <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-6 shadow-lg"></div>
+            <h3 className="text-xl font-extrabold text-[#2C3E50] mb-3 text-center px-4">{statusMessage}</h3>
+            
+            <div className="w-64 bg-gray-300 rounded-full h-2.5 my-3 shadow-inner overflow-hidden">
+              <div 
+                className="bg-[#2C3E50] h-full rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${loadProgress}%` }}
+              ></div>
             </div>
-          )}
+            
+            <p className="text-[#1A1A1A] font-bold text-sm font-mono mt-2">
+              ใช้เวลาประมาณ: <span className="text-red-600">{countdown}</span> วินาที
+            </p>
+            <p className="text-gray-500 font-medium text-center px-4 text-[11px] mt-4">
+              (ระบบจะพยายามเชื่อมต่อใหม่อัตโนมัติ โดยไม่ต้องรีเฟรชหน้าเว็บ)
+            </p>
+          </div>
+        )}
 
-          {/* 🌟 2. Form Header */}
+        {/* 🌟 2. UI ส่วนของการ์ดฟอร์ม (ซ่อนไว้ก่อนถ้ายาวโหลด) */}
+        <div className={`w-full max-w-3xl bg-white p-6 sm:p-10 rounded-2xl shadow-xl border border-gray-100 relative overflow-hidden min-h-[450px] transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+          
           <div className="mb-8 border-b border-gray-100 pb-5">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1A1A1A] flex items-center gap-3">
               <div className="p-2 bg-[#8FAFC1]/20 rounded-lg text-[#2C3E50]">
@@ -213,7 +203,6 @@ function PaymentInput() {
 
           <div className="flex flex-col gap-5 sm:gap-6 w-full max-w-2xl mx-auto">
             
-            {/* Section 1: Room & Resident Info */}
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
               <label className="text-gray-800 font-bold text-sm sm:text-base">Choose Room</label>
               <select 
@@ -223,7 +212,7 @@ function PaymentInput() {
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm text-gray-800 font-medium"
               >
                 <option value="" disabled>-- Select a room --</option>
-                {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} - {r.name}</option>)}
+                {occupiedRooms.map((r, idx) => <option key={idx} value={r.room}>{r.room} {r.name}</option>)}
               </select>
             </div>
 
@@ -257,7 +246,6 @@ function PaymentInput() {
               </div>
             </div>
 
-            {/* 🌟 3. Add Other Box (ปรับใหม่ให้พรีเมียมขึ้น) */}
             <div className="mt-2 p-5 bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] border border-[#e2e8f0] rounded-xl shadow-sm transition-all duration-300">
               <label className="flex items-center gap-3 text-[#1e293b] font-bold cursor-pointer text-sm sm:text-base select-none">
                 <input 
@@ -307,7 +295,6 @@ function PaymentInput() {
               )}
             </div>
 
-            {/* Section Divider */}
             <hr className="border-gray-100 my-2" />
 
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
@@ -336,7 +323,6 @@ function PaymentInput() {
               </div>
             </div>
 
-            {/* Utility Meters */}
             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 flex flex-col gap-4 mt-2">
               <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                 <label className={`font-bold text-sm sm:text-base flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>
@@ -367,7 +353,6 @@ function PaymentInput() {
               </div>
             </div>
 
-            {/* 🌟 4. Next Button (ปรับให้ดูพรีเมียม กว้างขึ้น และมีแอนิเมชันตอนชี้) */}
             <div className="flex justify-end mt-6">
               <button 
                 onClick={handleNext} 
@@ -383,11 +368,9 @@ function PaymentInput() {
         </div>
       </div>
 
-      {/* 🎯 Custom Alert Popup (คงเดิม) */}
       {alertData.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
-            
             {alertData.type === 'error' && (
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm border-4 border-red-50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -398,23 +381,14 @@ function PaymentInput() {
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
             )}
-            
-            <h3 className={`text-xl font-extrabold mb-2 
-              ${alertData.type === 'error' ? 'text-red-700' : ''}
-              ${alertData.type === 'warning' ? 'text-yellow-600' : ''}
-            `}>
+            <h3 className={`text-xl font-extrabold mb-2 ${alertData.type === 'error' ? 'text-red-700' : ''} ${alertData.type === 'warning' ? 'text-yellow-600' : ''}`}>
               {alertData.type === 'error' && 'เกิดข้อผิดพลาด!'}
               {alertData.type === 'warning' && 'แจ้งเตือน'}
             </h3>
-            
             <p className="text-gray-600 mb-6 font-medium leading-relaxed">{alertData.text}</p>
-            
             <button
               onClick={() => setAlertData({ show: false, type: '', text: '' })}
-              className={`px-8 py-3 font-bold text-white rounded-xl transition-transform active:scale-95 w-full shadow-md 
-                ${alertData.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : ''}
-                ${alertData.type === 'warning' ? 'bg-[#F39C12] hover:bg-[#D68910]' : ''}
-              `}
+              className={`px-8 py-3 font-bold text-white rounded-xl transition-transform active:scale-95 w-full shadow-md ${alertData.type === 'error' ? 'bg-[#E74C3C] hover:bg-[#C0392B]' : ''} ${alertData.type === 'warning' ? 'bg-[#F39C12] hover:bg-[#D68910]' : ''}`}
             >
               ตกลง
             </button>

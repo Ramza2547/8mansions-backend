@@ -7,10 +7,8 @@ function GuestComment() {
   const [formData, setFormData] = useState({ room: '', comment: '' });
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
-  // 🎯 State จัดการ Popup Alert
+  // 🎯 State สำหรับจัดการ Custom Alert Popup และสถานะการโหลด
   const [alertData, setAlertData] = useState({ show: false, type: '', text: '' });
-  
-  // 🎯 [เพิ่มใหม่] State ป้องกันการกดปุ่มซ้ำ
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,9 +16,6 @@ function GuestComment() {
   const handleSend = async (e) => {
     e.preventDefault();
     
-    // ป้องกันการกดซ้ำถ้าระบบกำลังส่งข้อมูลอยู่
-    if (isSubmitting) return;
-
     if (!formData.room) {
       setAlertData({ show: true, type: 'warning', text: 'Please select your Room Number.' });
       return;
@@ -30,18 +25,17 @@ function GuestComment() {
       return;
     }
 
-    // 🎯 เริ่มการโหลด ป้องกันกดปุ่มซ้ำ
+    // 🎯 ล็อคปุ่มทันทีเพื่อป้องกันการกดเบิ้ล
     setIsSubmitting(true);
 
     try {
       await axios.post('https://eightmansions-backend.onrender.com/api/feedbacks/', formData);
-      // ส่งสำเร็จ ไปหน้า Success ทันที
       navigate('/comment/success');
     } catch (error) {
       console.error('Error sending feedback:', error);
       setAlertData({ show: true, type: 'error', text: 'Failed to send comment. Please try again.' });
-      // 🎯 ถ้าส่งไม่สำเร็จ ให้ปลดล็อกปุ่มเพื่อให้กดส่งใหม่ได้
-      setIsSubmitting(false);
+      // 🎯 ปลดล็อคปุ่มเมื่อเกิด Error เพื่อให้กดส่งใหม่ได้
+      setIsSubmitting(false); 
     }
   };
 
@@ -72,7 +66,7 @@ function GuestComment() {
                 value={formData.room} 
                 onChange={handleChange}
                 disabled={isSubmitting}
-                className="w-full sm:w-1/2 p-3 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm sm:text-base disabled:opacity-50" 
+                className="w-full sm:w-1/2 p-3 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed" 
               >
                 <option value="" disabled>Select Room</option>
                 {roomNames.map((room) => <option key={room} value={room}>{room}</option>)}
@@ -88,7 +82,7 @@ function GuestComment() {
                 value={formData.comment} 
                 onChange={handleChange}
                 disabled={isSubmitting}
-                className="w-full p-4 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none resize-none text-sm sm:text-base disabled:opacity-50" 
+                className="w-full p-4 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none resize-none text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed" 
               />
             </div>
 
@@ -97,39 +91,33 @@ function GuestComment() {
                 type="button" 
                 onClick={() => navigate('/')} 
                 disabled={isSubmitting}
-                className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center disabled:opacity-50"
+                className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Back
               </button>
               
-              {/* 🎯 ปุ่ม Send ที่ปรับเปลี่ยนสถานะตามการโหลด */}
+              {/* 🎯 ปุ่ม Send ที่จะเปลี่ยนสถานะตอนกำลังโหลด */}
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className={`w-full sm:w-auto font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center flex justify-center items-center gap-2 ${
-                  isSubmitting 
-                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
-                    : 'bg-[#8FAFC1] hover:bg-[#7a96a8] text-black'
-                }`}
+                className={`w-full sm:w-auto font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center flex justify-center items-center gap-2
+                  ${isSubmitting ? 'bg-gray-400 text-gray-700 cursor-wait' : 'bg-[#8FAFC1] hover:bg-[#7a96a8] text-black'}
+                `}
               >
-                {isSubmitting ? (
-                  <>
-                    <svg className="w-5 h-5 animate-spin text-gray-700" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Sending...
-                  </>
-                ) : (
-                  'Send'
+                {isSubmitting && (
+                  <svg className="w-5 h-5 animate-spin text-gray-700" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
                 )}
+                {isSubmitting ? 'Sending...' : 'Send'}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* 🎯 Custom Alert Popup */}
+      {/* 🎯 ส่วนของ Custom Alert Popup */}
       {alertData.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">

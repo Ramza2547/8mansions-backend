@@ -21,7 +21,7 @@ function GuestCommentSuccess() {
 
       <div className="flex-1 flex flex-col justify-center items-center p-6 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-[#1A1A1A] mb-6 sm:mb-8">
-          Success fully!
+          Successfully!
         </h1>
         <button onClick={() => navigate('/')} className="mt-2 sm:mt-4 text-[#8FAFC1] font-bold hover:text-gray-700 underline underline-offset-4 text-sm sm:text-base">
           Return to Home

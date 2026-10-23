@@ -1,3 +1,4 @@
+// ไฟล์ GuestCommentSuccess
 import { useNavigate } from 'react-router-dom';
 
 function GuestCommentSuccess() {
@@ -5,7 +6,6 @@ function GuestCommentSuccess() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] font-sans">
-      {/* 🎯 Navbar Responsive */}
       <nav className="sticky top-0 z-50 w-full bg-[#8FAFC1] shadow-md">
         <div className="flex justify-between items-stretch w-full min-h-[60px] sm:min-h-[80px]">
           <div className="flex gap-4 sm:gap-10 items-center px-[5%]">
@@ -20,8 +20,9 @@ function GuestCommentSuccess() {
       </nav>
 
       <div className="flex-1 flex flex-col justify-center items-center p-6 text-center">
+        {/* 🎯 แก้ Successfully! เป็น Success! */}
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-[#1A1A1A] mb-6 sm:mb-8">
-          Successfully!
+          Success!
         </h1>
         <button onClick={() => navigate('/')} className="mt-2 sm:mt-4 text-[#8FAFC1] font-bold hover:text-gray-700 underline underline-offset-4 text-sm sm:text-base">
           Return to Home

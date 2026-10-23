@@ -7,15 +7,20 @@ function GuestComment() {
   const [formData, setFormData] = useState({ room: '', comment: '' });
   const roomNames = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2'];
 
-  // 🎯 เพิ่ม State สำหรับจัดการ Custom Alert Popup
+  // 🎯 State จัดการ Popup Alert
   const [alertData, setAlertData] = useState({ show: false, type: '', text: '' });
+  
+  // 🎯 [เพิ่มใหม่] State ป้องกันการกดปุ่มซ้ำ
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSend = async (e) => {
     e.preventDefault();
     
-    // 🎯 เปลี่ยนจากการใช้ alert() ปกติ มาเรียกใช้ Custom Alert แทน
+    // ป้องกันการกดซ้ำถ้าระบบกำลังส่งข้อมูลอยู่
+    if (isSubmitting) return;
+
     if (!formData.room) {
       setAlertData({ show: true, type: 'warning', text: 'Please select your Room Number.' });
       return;
@@ -25,12 +30,18 @@ function GuestComment() {
       return;
     }
 
+    // 🎯 เริ่มการโหลด ป้องกันกดปุ่มซ้ำ
+    setIsSubmitting(true);
+
     try {
       await axios.post('https://eightmansions-backend.onrender.com/api/feedbacks/', formData);
+      // ส่งสำเร็จ ไปหน้า Success ทันที
       navigate('/comment/success');
     } catch (error) {
       console.error('Error sending feedback:', error);
       setAlertData({ show: true, type: 'error', text: 'Failed to send comment. Please try again.' });
+      // 🎯 ถ้าส่งไม่สำเร็จ ให้ปลดล็อกปุ่มเพื่อให้กดส่งใหม่ได้
+      setIsSubmitting(false);
     }
   };
 
@@ -60,7 +71,8 @@ function GuestComment() {
                 name="room" 
                 value={formData.room} 
                 onChange={handleChange}
-                className="w-full sm:w-1/2 p-3 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm sm:text-base" 
+                disabled={isSubmitting}
+                className="w-full sm:w-1/2 p-3 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none cursor-pointer text-sm sm:text-base disabled:opacity-50" 
               >
                 <option value="" disabled>Select Room</option>
                 {roomNames.map((room) => <option key={room} value={room}>{room}</option>)}
@@ -72,31 +84,56 @@ function GuestComment() {
               <textarea 
                 name="comment" 
                 rows="5"
-                placeholder="Ex. Fast service..."
+                placeholder="e.g., Fast service..."
                 value={formData.comment} 
                 onChange={handleChange}
-                className="w-full p-4 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none resize-none text-sm sm:text-base" 
+                disabled={isSubmitting}
+                className="w-full p-4 bg-gray-200 border-none rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none resize-none text-sm sm:text-base disabled:opacity-50" 
               />
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row justify-between mt-4 gap-3 sm:gap-0">
-              <button type="button" onClick={() => navigate('/')} className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center">
+              <button 
+                type="button" 
+                onClick={() => navigate('/')} 
+                disabled={isSubmitting}
+                className="w-full sm:w-auto bg-[#FF0000] hover:bg-red-700 text-white font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center disabled:opacity-50"
+              >
                 Back
               </button>
-              <button type="submit" className="w-full sm:w-auto bg-[#8FAFC1] hover:bg-[#7a96a8] text-black font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center">
-                Send
+              
+              {/* 🎯 ปุ่ม Send ที่ปรับเปลี่ยนสถานะตามการโหลด */}
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className={`w-full sm:w-auto font-bold py-3 sm:py-2 px-10 rounded shadow transition-colors text-center flex justify-center items-center gap-2 ${
+                  isSubmitting 
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+                    : 'bg-[#8FAFC1] hover:bg-[#7a96a8] text-black'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin text-gray-700" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  'Send'
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* 🎯 ส่วนของ Custom Alert Popup */}
+      {/* 🎯 Custom Alert Popup */}
       {alertData.show && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center text-center transform transition-all scale-100">
             
-            {/* ไอคอนแจ้งเตือน */}
             {alertData.type === 'error' && (
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 shadow-sm border-4 border-red-50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -108,7 +145,6 @@ function GuestComment() {
               </div>
             )}
             
-            {/* หัวข้อแจ้งเตือน */}
             <h3 className={`text-xl font-extrabold mb-2 
               ${alertData.type === 'error' ? 'text-red-700' : ''}
               ${alertData.type === 'warning' ? 'text-yellow-600' : ''}
@@ -117,10 +153,8 @@ function GuestComment() {
               {alertData.type === 'warning' && 'Please Check'}
             </h3>
             
-            {/* ข้อความแจ้งเตือน */}
             <p className="text-gray-600 mb-6 font-medium">{alertData.text}</p>
             
-            {/* ปุ่มตกลงปิด Popup */}
             <button
               onClick={() => setAlertData({ show: false, type: '', text: '' })}
               className={`px-8 py-3 font-bold text-white rounded-xl transition-transform active:scale-95 w-full shadow-md 
@@ -133,7 +167,6 @@ function GuestComment() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

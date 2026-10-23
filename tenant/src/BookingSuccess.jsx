@@ -20,7 +20,7 @@ function BookingSuccess() {
 
       <div className="flex-1 flex justify-center items-center p-4">
         <div className="text-center animate-fade-in-up">
-          <h1 className="text-5xl font-bold text-black mb-8">Success fully!</h1>
+          <h1 className="text-5xl font-bold text-black mb-8">Successfully!</h1>
           <button onClick={() => navigate('/')} className="bg-black text-white font-bold py-3 px-10 rounded-full hover:bg-gray-800 transition">
             Return to Home
           </button>

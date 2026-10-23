@@ -80,7 +80,7 @@ function AdminDashboard() {
 
           <div className="flex items-center ml-auto">
             <span onClick={handleLogout} className="mr-3 sm:mr-8 cursor-pointer font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] whitespace-nowrap hover:text-red-700 transition-colors">
-              Log out
+              Logout
             </span>
             <div className="bg-black min-h-[60px] px-3 sm:px-6 flex items-center justify-center">
               <img src="/logo.png" alt="8 Mansions Logo" className="h-[25px] sm:h-[40px]" />

@@ -16,7 +16,7 @@ function PaymentSuccess() {
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
-            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold hover:text-red-700 text-[13px] sm:text-[16px]">Log out</span>
+            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold hover:text-red-700 text-[13px] sm:text-[16px]">Logout</span>
             <div className="bg-black min-h-[60px] px-3 sm:px-6 flex items-center justify-center">
               <img src="/logo.png" alt="Logo" className="h-[25px] sm:h-[40px]" />
             </div>
@@ -26,7 +26,7 @@ function PaymentSuccess() {
 
       <div className="flex-1 flex flex-col justify-center items-center py-10 px-4 text-center">
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-[#1A1A1A] mb-6 sm:mb-8">
-          Success fully!
+          Successfully!
         </h1>
         <button onClick={() => navigate('/admin')} className="mt-6 sm:mt-8 text-blue-600 font-medium hover:underline text-sm sm:text-base">
           Back to Dashboard

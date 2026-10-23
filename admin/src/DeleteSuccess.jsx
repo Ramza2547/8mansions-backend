@@ -15,7 +15,7 @@ function DeleteSuccess() {
             <span className="cursor-pointer px-1 sm:px-2">Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
-            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] whitespace-nowrap hover:text-red-700 transition-colors">Log out</span>
+            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] whitespace-nowrap hover:text-red-700 transition-colors">Logout</span>
             <div className="bg-black min-h-[60px] px-3 sm:px-6 flex items-center justify-center">
               <img src="/logo.png" alt="8 Mansions Logo" className="h-[25px] sm:h-[40px]" />
             </div>
@@ -26,7 +26,7 @@ function DeleteSuccess() {
       {/* Content ลบสำเร็จ (Frame 33) */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 text-center">
         <h1 className="text-4xl md:text-6xl font-extrabold text-[#1A1A1A] mb-16 tracking-wide">
-          Delete success fully!
+          Delete Successfully!
         </h1>
         
         <button 

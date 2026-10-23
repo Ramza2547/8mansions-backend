@@ -297,7 +297,7 @@ function FinancialData() {
     const element = pdfRef.current;
     const filename = `8Mansions_Financial_${filterMonth.replace(/\s+/g, '_')}.pdf`;
     
-    // 🌟 แก้ไข: เพิ่มออปชั่น pagebreak: { mode: ['css', 'legacy'] } เพื่อให้ html2pdf ไม่ตัดกลางตาราง
+    // 🌟 ออปชั่น pagebreak: { mode: ['css', 'legacy'] } เพื่อให้ html2pdf ไม่ตัดกลางตาราง
     const opt = {
       margin: [0.3, 0.3, 0.3, 0.3], 
       filename: filename, 
@@ -413,7 +413,7 @@ function FinancialData() {
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
           <div className="flex items-center ml-auto">
-            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold hover:text-red-700 text-[13px] sm:text-[16px]">Log out</span>
+            <span onClick={() => navigate('/')} className="mr-3 sm:mr-8 cursor-pointer font-bold hover:text-red-700 text-[13px] sm:text-[16px]">Logout</span>
             <div className="bg-black min-h-[60px] px-3 sm:px-6 flex items-center justify-center">
               <img src="/logo.png" alt="Logo" className="h-[25px] sm:h-[40px]" />
             </div>
@@ -744,7 +744,7 @@ function FinancialData() {
                 <h3 className="font-extrabold text-green-800 mb-4 uppercase tracking-wider text-sm border-b border-green-200 pb-2">Record Additional Income</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
                       <input 
                         type="checkbox" 
                         checked={currentWashingMachineEnabled} 
@@ -798,7 +798,7 @@ function FinancialData() {
 
                   <div className="mt-2 border-t pt-4">
                     <div className="flex justify-between items-center mb-3">
-                      <label className="block text-xs font-bold text-gray-500 uppercase">Other Expenses (ค่าใช้จ่ายอื่นๆ)</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase">Other Expenses (ค่าใช้จ่ายอื่น ๆ)</label>
                       <button 
                         onClick={() => handleAddCustomExpense(filterMonth)} 
                         className="text-sm font-extrabold text-[#3498DB] hover:text-[#2980B9] flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded shadow-sm hover:bg-blue-100 transition-colors"
@@ -811,7 +811,7 @@ function FinancialData() {
                     <div className="flex flex-col gap-3">
                       {currentCustomList.length === 0 && (
                         <div className="text-center py-4 bg-white border border-dashed border-gray-300 rounded-lg text-gray-400 text-sm">
-                          ไม่มีค่าใช้จ่ายอื่นๆ ในเดือนนี้ (คลิก Add Item เพื่อเพิ่มรายการ)
+                          ไม่มีค่าใช้จ่ายอื่น ๆ ในเดือนนี้ (คลิก Add Item เพื่อเพิ่มรายการ)
                         </div>
                       )}
                       {currentCustomList.map((exp, index) => (
@@ -890,31 +890,31 @@ function FinancialData() {
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">PEA Bill (ค่าไฟการไฟฟ้า)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">- {currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">PWA Bill (ค่าน้ำประปา)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">- {currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">Internet Bill (ค่าอินเตอร์เน็ต)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">- {currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 
                 {isYearlyView ? (
                   <tr className="hover:bg-red-50/50">
-                    <td className="py-3 px-4 whitespace-nowrap text-gray-600 font-bold">Other Custom Expenses (รวมรายจ่ายอื่นๆ)</td>
+                    <td className="py-3 px-4 whitespace-nowrap text-gray-600 font-bold">Other Custom Expenses (รวมรายจ่ายอื่น ๆ)</td>
                     <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                    <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">- {currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   </tr>
                 ) : (
                   currentCustomList.map((exp, idx) => (
                     <tr key={exp.id || idx} className="border-b border-gray-100 hover:bg-red-50/50">
                       <td className="py-3 px-4 whitespace-nowrap text-gray-600">{exp.detail || 'ไม่ระบุชื่อรายการ'}</td>
                       <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                      <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">- {Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     </tr>
                   ))
                 )}
@@ -924,7 +924,7 @@ function FinancialData() {
                 <tr>
                   <td className="py-5 px-4 font-black uppercase text-lg tracking-widest whitespace-nowrap">Net Profit (กำไรสุทธิ)</td>
                   <td className="py-5 px-4 text-right font-bold text-gray-400 whitespace-nowrap">{totalIncomeCollected.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-5 px-4 text-right font-bold text-red-400 whitespace-nowrap">- {totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-5 px-4 text-right font-bold text-red-400 whitespace-nowrap">{totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="bg-[#0f0f0f]">
                   <td colSpan="3" className="py-6 px-6 text-right whitespace-nowrap">
@@ -973,7 +973,7 @@ function FinancialData() {
             <div className="flex justify-end mt-2">
               <div className="flex items-center gap-1 text-green-600 font-extrabold animate-pulse bg-green-50 px-3 py-1.5 rounded-full border border-green-200 text-sm">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
-                <span>บันทึกสำเร็จ!</span>
+                <span>Successfully!</span>
               </div>
             </div>
           )}

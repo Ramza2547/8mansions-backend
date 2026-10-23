@@ -52,7 +52,7 @@ function DeleteConfirm() {
       {/* Content ยืนยันการลบ (Frame 32) */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 text-center">
         <h1 className="text-3xl md:text-4xl font-bold text-[#1A1A1A] mb-12">
-          Are you sure want to delete the room {room} data?
+          Are you sure you want to delete the tenant data for {room}?
         </h1>
         
         <div className="flex gap-8 md:gap-16">

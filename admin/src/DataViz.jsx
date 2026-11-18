@@ -282,7 +282,7 @@ function DataViz() {
 
     setRoomBarData({
       labels: ROOMS,
-      datasets: [{ label: 'Total Generated (THB)', data: roomRevenues, backgroundColor: '#1ABC9C', borderRadius: 4 }]
+      datasets: [{ label: 'Total Generated', data: roomRevenues, backgroundColor: '#1ABC9C', borderRadius: 4 }]
     });
 
     setCollectionData({
@@ -307,12 +307,23 @@ function DataViz() {
     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { position: 'top', labels: { font: { family: 'Inter', weight: 'bold' }, usePointStyle: true, padding: 15 } },
-      tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, cornerRadius: 8, callbacks: { label: (c) => ` ${c.dataset.label}: ฿${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}` } }
+      tooltip: { 
+        backgroundColor: 'rgba(0,0,0,0.8)', 
+        padding: 12, 
+        cornerRadius: 8, 
+        // 🌟 เพิ่มการเช็คว่าถ้าไม่ใช่เปอร์เซ็นต์ ให้ใส่สัญลักษณ์ ฿ ลงไป
+        callbacks: { 
+          label: (c) => ` ${c.dataset.label}: ${c.dataset.label.includes('%') ? '' : '฿'}${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}${c.dataset.label.includes('%') ? '%' : ''}` 
+        } 
+      }
     },
-    scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.06)', borderDash: [5, 5] }, ticks: { callback: (val) => '฿' + val.toLocaleString() } } }
+    scales: { 
+      x: { grid: { display: false } }, 
+      y: { grid: { color: 'rgba(0,0,0,0.06)', borderDash: [5, 5] }, ticks: { callback: (val) => '฿' + val.toLocaleString() } } 
+    }
   };
 
-  const stackedOpts = { ...defaultOpts, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(0,0,0,0.06)' } } } };
+  const stackedOpts = { ...defaultOpts, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: (val) => '฿' + val.toLocaleString() } } } };
   
   const doughnutOpts = {
     responsive: true, maintainAspectRatio: false, cutout: '65%',
@@ -322,14 +333,48 @@ function DataViz() {
     }
   };
 
-  // 🌟 เพิ่ม Horizontal Bar Options ที่ตกหล่นไป
+  // 🌟 ปรับปรุง Horizontal Bar Options ให้ Tooltip มีสัญลักษณ์ ฿ อย่างถูกต้อง
   const horizontalBarOptions = {
     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ฿${c.parsed.x.toLocaleString('en-US', {minimumFractionDigits: 2})}` } } },
-    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } } }
+    plugins: { 
+      legend: { display: false }, 
+      tooltip: { 
+        callbacks: { 
+          label: (c) => ` ${c.dataset.label}: ฿${c.parsed.x.toLocaleString('en-US', {minimumFractionDigits: 2})}` 
+        } 
+      } 
+    },
+    scales: { x: { grid: { display: false }, ticks: { callback: (val) => '฿' + val.toLocaleString() } }, y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } } }
   };
 
-  const lineOpts = { ...defaultOpts, plugins: { ...defaultOpts.plugins, tooltip: { ...defaultOpts.plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 1})}${c.dataset.label.includes('%') ? '%' : ' ฿'}` } } } };
+  const lineOpts = { 
+    ...defaultOpts, 
+    plugins: { 
+      ...defaultOpts.plugins, 
+      tooltip: { 
+        ...defaultOpts.plugins.tooltip, 
+        callbacks: { 
+          label: (c) => ` ${c.dataset.label}: ${c.dataset.label.includes('%') ? '' : '฿'}${c.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 1})}${c.dataset.label.includes('%') ? '%' : ''}` 
+        } 
+      } 
+    },
+    // 🌟 ดักจับแกน Y ของกราฟ Margin Trend ไม่ให้ใส่ตัว ฿ ถ้ายอดเป็นเปอร์เซ็นต์
+    scales: { 
+      x: { grid: { display: false } }, 
+      y: { 
+        grid: { color: 'rgba(0,0,0,0.06)', borderDash: [5, 5] }, 
+        ticks: { 
+          callback: function(val) {
+            // ถ้าเป็นกราฟ MarginTrendData (ที่มีคำว่า %) จะไม่ใส่ ฿ ที่แกน y
+            if (this.chart.data.datasets[0].label.includes('%')) {
+              return val + '%';
+            }
+            return '฿' + val.toLocaleString();
+          }
+        } 
+      } 
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F4F7F9] font-sans pb-10 relative">
@@ -500,7 +545,7 @@ function DataViz() {
               <h2 className="text-lg font-extrabold text-[#2C3E50] mb-1">8. Top Performing Rooms</h2>
               <p className="text-xs text-gray-400 mb-4 font-medium">Ranked by total revenue generated</p>
               <div className="flex-1 w-full relative">
-                 {roomBarData && <Bar data={roomBarData} options={{...horizontalBarOptions, plugins: { legend: { display: false } }}} />}
+                 {roomBarData && <Bar data={roomBarData} options={{...horizontalBarOptions, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ฿${c.parsed.x.toLocaleString('en-US', {minimumFractionDigits: 2})}` } } }}} />}
               </div>
             </div>
           </div>

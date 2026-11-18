@@ -72,7 +72,7 @@ function PaymentReview() {
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
             <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin')}>Home</span>
-            <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/data')}>Data</span>
+            <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin/data')}>Data</span>
             <span className="cursor-pointer px-1 sm:px-2 underline">Payment</span>
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
@@ -117,11 +117,12 @@ function PaymentReview() {
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
               <label className="text-red-600 font-extrabold">Due Date</label>
               <div className="relative w-full">
+                {/* 🌟 เปลี่ยน dateFormat เป็น dd MMMM yyyy */}
                 <DatePicker
                   selected={getValidDate(formData.dueDate)}
                   onChange={handleDateChange}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="DD / MM / YYYY"
+                  dateFormat="dd MMMM yyyy"
+                  placeholderText="DD Month YYYY"
                   className="w-full p-3 bg-red-50/50 border border-red-200 rounded-xl outline-none font-bold text-red-600 focus:ring-2 focus:ring-red-200 transition-all shadow-sm"
                   wrapperClassName="w-full"
                 />
@@ -142,15 +143,16 @@ function PaymentReview() {
                 </div>
                 <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                   <label className={`font-bold ${isRefund ? 'text-red-800' : 'text-yellow-800'}`}>Amount (THB)</label>
-                  <div className="relative w-full">
-                    {isRefund && <span className="absolute left-3 top-3.5 font-extrabold text-red-600">-</span>}
+                  <div className="relative w-full flex items-center">
+                    {isRefund && <span className="absolute left-3 font-extrabold text-red-600">-</span>}
                     <input 
                       type="number" 
                       name="otherAmount" 
                       value={formData.otherAmount} 
                       onChange={handleChange} 
-                      className={`w-full p-3 bg-white border rounded-xl outline-none font-bold shadow-sm transition-all ${isRefund ? 'border-red-300 focus:ring-2 focus:ring-red-200 pl-7 text-red-600' : 'border-yellow-300 focus:ring-2 focus:ring-yellow-200 text-gray-800'}`} 
+                      className={`w-full p-3 pr-12 bg-white border rounded-xl outline-none font-bold shadow-sm transition-all ${isRefund ? 'border-red-300 focus:ring-2 focus:ring-red-200 pl-7 text-red-600' : 'border-yellow-300 focus:ring-2 focus:ring-yellow-200 text-gray-800'}`} 
                     />
+                    <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">THB</span>
                   </div>
                 </div>
               </div>
@@ -174,15 +176,18 @@ function PaymentReview() {
                     {formData.roomRentalRemark ? `(${formData.roomRentalRemark})` : '-'}
                   </div>
                 )}
-                <input 
-                  type="text" 
-                  name="roomRental" 
-                  value={disableRoomRental ? '' : formData.roomRental} 
-                  onChange={handleChange} 
-                  disabled={disableRoomRental} 
-                  placeholder="ยอดค่าเช่า..."
-                  className={`${isRefund ? 'w-1/2' : 'w-full'} p-3 border rounded-xl outline-none font-medium shadow-sm transition-all ${disableRoomRental ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white text-gray-800'}`} 
-                />
+                <div className={`relative flex items-center ${isRefund ? 'w-1/2' : 'w-full'}`}>
+                  <input 
+                    type="text" 
+                    name="roomRental" 
+                    value={disableRoomRental ? '' : formData.roomRental} 
+                    onChange={handleChange} 
+                    disabled={disableRoomRental} 
+                    placeholder="ยอดค่าเช่า..."
+                    className={`w-full p-3 pr-12 border rounded-xl outline-none font-medium shadow-sm transition-all ${disableRoomRental ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8FAFC1] focus:bg-white text-gray-800'}`} 
+                  />
+                  <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">THB</span>
+                </div>
               </div>
             </div>
 
@@ -190,22 +195,34 @@ function PaymentReview() {
             <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 flex flex-col gap-4 mt-2">
               <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                 <label className={`font-bold flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>⚡ Old Electric (Unit)</label>
-                <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                <div className="relative w-full flex items-center">
+                  <input type="number" step="0.1" name="oldElectric" value={disableUtils ? '' : formData.oldElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 pr-12 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                  <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">Unit</span>
+                </div>
               </div>
               <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                 <label className={`font-bold flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>⚡ New Electric (Unit)</label>
-                <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                <div className="relative w-full flex items-center">
+                  <input type="number" step="0.1" name="newElectric" value={disableUtils ? '' : formData.newElectric} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 pr-12 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                  <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">Unit</span>
+                </div>
               </div>
             </div>
 
             <div className="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100/50 flex flex-col gap-4">
               <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                 <label className={`font-bold flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>💧 Old Water (Unit)</label>
-                <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                <div className="relative w-full flex items-center">
+                  <input type="number" step="0.1" name="oldWater" value={disableUtils ? '' : formData.oldWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 pr-12 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                  <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">Unit</span>
+                </div>
               </div>
               <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr] items-start sm:items-center gap-2 sm:gap-6">
                 <label className={`font-bold flex items-center gap-2 ${disableUtils ? 'text-gray-400' : 'text-gray-800'}`}>💧 New Water (Unit)</label>
-                <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                <div className="relative w-full flex items-center">
+                  <input type="number" step="0.1" name="newWater" value={disableUtils ? '' : formData.newWater} onChange={handleChange} disabled={disableUtils} className={`w-full p-3 pr-12 border rounded-xl outline-none transition-all shadow-sm ${disableUtils ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 focus:ring-2 focus:ring-[#8FAFC1]'}`} />
+                  <span className="absolute right-4 text-gray-400 font-bold text-sm pointer-events-none">Unit</span>
+                </div>
               </div>
             </div>
 

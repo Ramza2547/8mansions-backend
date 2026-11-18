@@ -20,16 +20,19 @@ function RecommendRoom() {
 
     const currentYear = new Date().getFullYear();
 
+    // 🌟 รองรับรูปแบบวันที่ที่ส่งมาจาก GuestForm (dd MMMM yyyy หรือ yyyy-mm-dd)
     if (guestFormData && guestFormData.date_of_birth) {
-      const [d, m, y] = guestFormData.date_of_birth.split('/');
-      initialBirthDate = new Date(y, m - 1, d);
-      initialAge = currentYear - parseInt(y, 10);
+      initialBirthDate = new Date(guestFormData.date_of_birth);
+      if (!isNaN(initialBirthDate.getTime())) {
+        initialAge = currentYear - initialBirthDate.getFullYear();
+      }
     }
     
     if (guestFormData && guestFormData.date_of_birth_2) {
-      const [d2, m2, y2] = guestFormData.date_of_birth_2.split('/');
-      initialBirthDate2 = new Date(y2, m2 - 1, d2);
-      initialAge2 = currentYear - parseInt(y2, 10);
+      initialBirthDate2 = new Date(guestFormData.date_of_birth_2);
+      if (!isNaN(initialBirthDate2.getTime())) {
+        initialAge2 = currentYear - initialBirthDate2.getFullYear();
+      }
     }
 
     return { initialBirthDate, initialBirthDate2, initialAge, initialAge2 };
@@ -208,7 +211,21 @@ function RecommendRoom() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-gray-700 font-bold mb-1 text-[10px] sm:text-xs">Date of Birth</label>
-                    <DatePicker selected={birthDate} onChange={handleDateChange} dateFormat="dd/MM/yyyy" placeholderText="วันเกิด" showMonthDropdown showYearDropdown dropdownMode="select" yearDropdownItemNumber={100} scrollableYearDropdown maxDate={new Date()} className="w-full p-2 bg-gray-50 border border-gray-300 rounded outline-none text-sm" wrapperClassName="w-full"/>
+                    {/* 🌟 เปลี่ยนเป็น DatePicker */}
+                    <DatePicker 
+                      selected={birthDate} 
+                      onChange={handleDateChange} 
+                      dateFormat="dd MMMM yyyy" 
+                      placeholderText="DD Month YYYY" 
+                      showMonthDropdown 
+                      showYearDropdown 
+                      dropdownMode="select" 
+                      yearDropdownItemNumber={100} 
+                      scrollableYearDropdown 
+                      maxDate={new Date()} 
+                      className="w-full p-2 bg-gray-50 border border-gray-300 rounded outline-none text-sm cursor-pointer" 
+                      wrapperClassName="w-full"
+                    />
                   </div>
                   <div>
                     <label className="block text-gray-700 font-bold mb-1 text-xs">Age</label>
@@ -247,7 +264,22 @@ function RecommendRoom() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-gray-500 font-bold mb-1 text-[10px] sm:text-xs">Date of Birth</label>
-                    <DatePicker selected={birthDate2} onChange={handleDateChange2} disabled={formData.occupants === 1} dateFormat="dd/MM/yyyy" placeholderText="วันเกิด" showMonthDropdown showYearDropdown dropdownMode="select" yearDropdownItemNumber={100} scrollableYearDropdown maxDate={new Date()} className="w-full p-2 bg-white border border-gray-300 rounded outline-none text-sm disabled:bg-gray-100" wrapperClassName="w-full"/>
+                    {/* 🌟 เปลี่ยนเป็น DatePicker */}
+                    <DatePicker 
+                      selected={birthDate2} 
+                      onChange={handleDateChange2} 
+                      disabled={formData.occupants === 1} 
+                      dateFormat="dd MMMM yyyy" 
+                      placeholderText="DD Month YYYY" 
+                      showMonthDropdown 
+                      showYearDropdown 
+                      dropdownMode="select" 
+                      yearDropdownItemNumber={100} 
+                      scrollableYearDropdown 
+                      maxDate={new Date()} 
+                      className="w-full p-2 bg-white border border-gray-300 rounded outline-none text-sm disabled:bg-gray-100 cursor-pointer" 
+                      wrapperClassName="w-full"
+                    />
                   </div>
                   <div>
                     <label className="block text-gray-500 font-bold mb-1 text-xs">Age</label>

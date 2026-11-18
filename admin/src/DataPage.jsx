@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function DataPage() {
   const navigate = useNavigate();
@@ -67,9 +69,8 @@ function DataPage() {
         setCustomers([]);
       }
       
-      // หน่วงเวลาให้เห็นหลอด 100% สักแปปค่อยซ่อนหน้าจอโหลด
       setTimeout(() => setIsLoading(false), 800);
-      retryCount.current = 0; // รีเซ็ตตัวนับเมื่อสำเร็จ
+      retryCount.current = 0; 
       
     } catch (error) {
       clearInterval(window.dataInterval);
@@ -78,7 +79,6 @@ function DataPage() {
       setStatusMessage('เซิร์ฟเวอร์ยังไม่ตอบสนอง... กำลังเริ่มโหลดใหม่');
       retryCount.current += 1;
       
-      // 🌟 Auto-Retry ในอีก 3 วินาที
       setTimeout(() => fetchCustomers(), 3000);
     }
   };
@@ -98,6 +98,21 @@ function DataPage() {
     setEditingCustomer({
       ...editingCustomer,
       [e.target.name]: e.target.value
+    });
+  };
+
+  // 🌟 ฟังก์ชันแยกสำหรับจัดการวันที่ใน DatePicker ให้บันทึกเป็น yyyy-mm-dd สำหรับส่งหลังบ้าน
+  const handleDateChange = (name, date) => {
+    let value = '';
+    if (date) {
+       const year = date.getFullYear();
+       const month = String(date.getMonth() + 1).padStart(2, '0');
+       const day = String(date.getDate()).padStart(2, '0');
+       value = `${year}-${month}-${day}`;
+    }
+    setEditingCustomer({
+      ...editingCustomer,
+      [name]: value
     });
   };
 
@@ -162,16 +177,34 @@ function DataPage() {
     }
   };
 
+  // 🌟 ฟังก์ชัน Format วันที่ใหม่ ให้ออกเป็น dd MMMM yyyy เสมอ
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    if (!dateString || dateString === '-') return '-';
+    
+    let dateObj;
+    if (dateString.includes('-') && dateString.split('-').length === 3) {
+       dateObj = new Date(dateString);
+    } else if (dateString.includes('/') && dateString.split('/').length === 3) {
+        const parts = dateString.split('/');
+        dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); 
+    } else {
+        return dateString;
+    }
+
+    if (isNaN(dateObj.getTime())) return dateString;
+
+    return dateObj.toLocaleDateString('en-GB', {
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric'
+    });
   };
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '-';
     const date = new Date(isoString);
-    return date.toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+    if (isNaN(date.getTime())) return isoString;
+    return date.toLocaleString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
   };
 
   const allRoomsData = roomNames.map((room) => {
@@ -242,7 +275,6 @@ function DataPage() {
         <div className="w-full max-w-5xl">
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-            {/* 🌟 อัปเดตปุ่มจาก Revenue เป็น Financial */}
             <button 
               onClick={() => navigate('/admin/financial-data')} 
               className="bg-[#2C3E50] hover:bg-black text-white font-extrabold py-3 px-10 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 active:scale-95"
@@ -291,7 +323,6 @@ function DataPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 items-start relative min-h-[400px]">
-            {/* 🌟 UI ส่วนของ Auto-Retry Loading */}
             {isLoading ? (
               <div className="absolute inset-0 bg-[#EAEAEA]/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center py-10 rounded-lg shadow-sm border border-gray-200">
                 <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-4 shadow-lg"></div>
@@ -410,7 +441,12 @@ function DataPage() {
                   </div>
                   <div>
                     <label className="block text-gray-700 font-bold mb-1 text-sm">Date of Birth</label>
-                    <input type="date" name="date_of_birth" value={editingCustomer.date_of_birth || ''} onChange={handleEditChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none" />
+                    <DatePicker
+                      selected={editingCustomer.date_of_birth ? new Date(editingCustomer.date_of_birth) : null}
+                      onChange={(date) => handleDateChange('date_of_birth', date)}
+                      dateFormat="dd MMMM yyyy"
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none"
+                    />
                   </div>
                 </div>
               </div>
@@ -428,7 +464,12 @@ function DataPage() {
                   </div>
                   <div>
                     <label className="block text-gray-700 font-bold mb-1 text-sm">Date of Birth</label>
-                    <input type="date" name="date_of_birth_2" value={editingCustomer.date_of_birth_2 || ''} onChange={handleEditChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none" />
+                    <DatePicker
+                      selected={editingCustomer.date_of_birth_2 ? new Date(editingCustomer.date_of_birth_2) : null}
+                      onChange={(date) => handleDateChange('date_of_birth_2', date)}
+                      dateFormat="dd MMMM yyyy"
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-400 outline-none"
+                    />
                   </div>
                 </div>
               </div>
@@ -436,11 +477,21 @@ function DataPage() {
               <div className="grid grid-cols-2 gap-4 mt-2">
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-sm text-blue-700">Lease Start</label>
-                  <input type="date" name="lease_start" value={editingCustomer.lease_start || ''} onChange={handleEditChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none" />
+                  <DatePicker
+                    selected={editingCustomer.lease_start ? new Date(editingCustomer.lease_start) : null}
+                    onChange={(date) => handleDateChange('lease_start', date)}
+                    dateFormat="dd MMMM yyyy"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-gray-700 font-bold mb-1 text-sm text-red-600">Lease End</label>
-                  <input type="date" name="lease_end" value={editingCustomer.lease_end || ''} onChange={handleEditChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none" />
+                  <DatePicker
+                    selected={editingCustomer.lease_end ? new Date(editingCustomer.lease_end) : null}
+                    onChange={(date) => handleDateChange('lease_end', date)}
+                    dateFormat="dd MMMM yyyy"
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-[#8FAFC1] outline-none"
+                  />
                 </div>
               </div>
             </div>
@@ -483,8 +534,12 @@ function DataPage() {
                         <tr key={`${logIndex}-${changeIndex}`} className="hover:bg-gray-50 border-b last:border-0">
                           <td className="py-3 px-4 text-sm text-gray-600">{formatDateTime(log.timestamp)}</td>
                           <td className="py-3 px-4 text-sm text-gray-800 font-medium">{change.field}</td>
-                          <td className="py-3 px-4 text-sm text-red-500 line-through">{change.before}</td>
-                          <td className="py-3 px-4 text-sm text-green-600 font-bold">{change.after}</td>
+                          <td className="py-3 px-4 text-sm text-red-500 line-through">
+                            {['T1 DOB', 'T2 DOB', 'Lease Start', 'Lease End'].includes(change.field) ? formatDate(change.before) : change.before}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-green-600 font-bold">
+                            {['T1 DOB', 'T2 DOB', 'Lease Start', 'Lease End'].includes(change.field) ? formatDate(change.after) : change.after}
+                          </td>
                         </tr>
                       ))
                     ))}

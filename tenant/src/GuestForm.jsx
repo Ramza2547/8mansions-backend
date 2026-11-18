@@ -33,24 +33,31 @@ function GuestForm() {
     }
   }, [ocrData]);
 
+  // 🌟 ฟังก์ชันแปลง Date Object ให้ออกมาเป็น "dd MMMM yyyy"
   const formatDateToDMY = (dateObj) => {
     if (!dateObj) return '';
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const y = dateObj.getFullYear();
-    return `${d}/${m}/${y}`;
+    return dateObj.toLocaleDateString('en-GB', {
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric'
+    });
   };
 
-  const parseDMYToDate = (dmyStr) => {
-    if (!dmyStr || !dmyStr.includes('/')) return null;
-    const [d, m, y] = dmyStr.split('/');
-    return new Date(y, m - 1, d);
+  // 🌟 ฟังก์ชันแปลง String กลับเป็น Date Object (รองรับรูปแบบ dd MMMM yyyy)
+  const parseDMYToDate = (dateStr) => {
+    if (!dateStr) return null;
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) return null;
+    return dateObj;
   };
 
+  // 🌟 ฟังก์ชันคำนวณวันหมดสัญญา
   const calculateEndDate = (startDateStr, months) => {
     if (!startDateStr || !months) return '';
     const dateObj = parseDMYToDate(startDateStr);
     if (!dateObj) return '';
+    
+    // บวกเดือนเพิ่ม
     dateObj.setMonth(dateObj.getMonth() + parseInt(months));
     return formatDateToDMY(dateObj);
   };
@@ -124,8 +131,8 @@ function GuestForm() {
                     <DatePicker 
                       selected={parseDMYToDate(formData.date_of_birth)} 
                       onChange={(date) => handleDobChange(date, false)} 
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="DD/MM/YYYY"
+                      dateFormat="dd MMMM yyyy"
+                      placeholderText="DD Month YYYY"
                       showMonthDropdown
                       showYearDropdown
                       dropdownMode="select"
@@ -163,8 +170,8 @@ function GuestForm() {
                       <DatePicker 
                         selected={parseDMYToDate(formData.date_of_birth_2)} 
                         onChange={(date) => handleDobChange(date, true)} 
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="DD/MM/YYYY"
+                        dateFormat="dd MMMM yyyy"
+                        placeholderText="DD Month YYYY"
                         showMonthDropdown
                         showYearDropdown
                         dropdownMode="select"
@@ -189,9 +196,9 @@ function GuestForm() {
                     <DatePicker 
                       selected={parseDMYToDate(formData.lease_start)} 
                       onChange={handleDateChange} 
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="DD/MM/YYYY"
-                      minDate={new Date()} /* 🎯 ล็อคไม่ให้เลือกวันย้อนหลังตรงนี้ครับ */
+                      dateFormat="dd MMMM yyyy"
+                      placeholderText="DD Month YYYY"
+                      minDate={new Date()}
                       className="w-full p-2 text-sm sm:text-base border rounded focus:ring-2 focus:ring-[#8FAFC1] bg-white cursor-pointer"
                       wrapperClassName="w-full"
                     />

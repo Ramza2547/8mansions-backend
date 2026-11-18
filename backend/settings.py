@@ -151,3 +151,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://localhost:5175",
 ]
+
+# เพิ่มตั้งค่านี้ที่ด้านล่างสุดของไฟล์ settings.py
+REST_FRAMEWORK = {
+    'DATE_FORMAT': '%d %B %Y',
+    'DATETIME_FORMAT': '%d %B %Y %H:%M',
+}

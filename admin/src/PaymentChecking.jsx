@@ -68,15 +68,15 @@ const handleFinish = async () => {
 
     html2pdf().set(opt).from(element).save();
 
-    // 🎯 แก้ไขตรงนี้: ส่งไปดักทั้ง 2 แบบให้ Django เข้าใจ
+    // 🎯 ส่งไปดักทั้ง 2 แบบให้ Django เข้าใจ
     const newInvoiceRecord = {
       room: data.room,
       name: data.name,
       dueDate: data.dueDate,
       billingMonth: billingPeriod,
       roomRental: roomRental,
-      roomRentalRemark: data.roomRentalRemark || '', // สำหรับหน้าบ้าน
-      room_rental_remark: data.roomRentalRemark || '', // 🎯 ดักส่งให้ Django หลังบ้าน (snake_case)
+      roomRentalRemark: data.roomRentalRemark || '', 
+      room_rental_remark: data.roomRentalRemark || '', 
       elecBill: elecBill,
       waterBill: waterBill,
       remark: data.hasOther ? data.otherDetail : '', 
@@ -108,7 +108,7 @@ const handleFinish = async () => {
         <div className="flex items-center justify-between min-h-[60px] flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3 sm:gap-6 pl-3 sm:pl-8 py-2 font-bold text-[#1A1A1A] text-[13px] sm:text-[16px] overflow-x-auto whitespace-nowrap">
             <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin')}>Home</span>
-            <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/data')}>Data</span>
+            <span className="cursor-pointer px-1 sm:px-2 hover:text-white" onClick={() => navigate('/admin/data')}>Data</span>
             <span className="cursor-pointer px-1 sm:px-2 underline">Payment</span>
             <span className="cursor-pointer px-1 sm:px-2 hover:text-gray-700 transition-colors" onClick={() => navigate('/admin/feedback')}>Feedback</span>
           </div>
@@ -160,43 +160,62 @@ const handleFinish = async () => {
             <thead>
               <tr className="border-b border-gray-400">
                 <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 pr-1">Description</th>
-                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Old (Unit)</th>
-                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">New (Unit)</th>
-                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Total Units</th>
-                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-right px-0.5">Rate (THB)</th>
-                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-right pl-1">Amount (THB)</th>
+                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Old</th>
+                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">New</th>
+                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-center px-0.5">Total</th>
+                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-right px-0.5">Rate</th>
+                <th className="py-1 sm:py-3 text-[8px] sm:text-sm font-bold text-gray-800 text-right pl-1">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b border-gray-200">
                 <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">
-                  {/* 🎯 ตัดคำว่า Room Rental ออกเมื่อเลือก Refund */}
                   {isRefund ? (data.roomRentalRemark || '-') : 'Room Rental'}
                 </td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                 <td className="py-2 sm:py-4 text-right text-[8px] sm:text-sm text-gray-500">-</td>
-                <td className="py-2 sm:py-4 text-[9px] sm:text-base text-right text-gray-800">
-                  {/* 🎯 ถ้าใส่ - มา ก็ให้โชว์ - ตรงๆ ในไฟล์ PDF เลย */}
-                  {disableRoomRental ? '-' : (data.roomRental === '-' ? '-' : roomRental.toLocaleString('en-US', {minimumFractionDigits: 2}))}
+                <td className="py-2 sm:py-4 text-[8px] sm:text-base text-right text-gray-800">
+                  {/* 🌟 แสดงสัญลักษณ์ ฿ นำหน้ายอดเงินค่าเช่า */}
+                  {disableRoomRental ? '-' : (data.roomRental === '-' ? '-' : `฿ ${roomRental.toLocaleString('en-US', {minimumFractionDigits: 2})}`)}
                 </td>
               </tr>
               <tr className="border-b border-gray-200">
                 <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">Electricity</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : data.oldElectric}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : data.newElectric}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : elecUnit.toFixed(1)}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-right text-gray-700">{disableUtils ? '-' : '5.00'}</td>
-                <td className="py-2 sm:py-4 text-[9px] sm:text-base text-right text-gray-800">{disableUtils ? '-' : elecBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${data.oldElectric} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${data.newElectric} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${elecUnit.toFixed(1)} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-right text-gray-700">
+                  {disableUtils ? '-' : '฿ 5.00'}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-base text-right text-gray-800">
+                  {disableUtils ? '-' : `฿ ${elecBill.toLocaleString('en-US', {minimumFractionDigits: 2})}`}
+                </td>
               </tr>
               <tr className="border-b border-gray-400">
                 <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-gray-700">Water</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : data.oldWater}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : data.newWater}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">{disableUtils ? '-' : waterUnit.toFixed(1)}</td>
-                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-right text-gray-700">{disableUtils ? '-' : '7.00'}</td>
-                <td className="py-2 sm:py-4 text-[9px] sm:text-base text-right text-gray-800">{disableUtils ? '-' : waterBill.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${data.oldWater} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${data.newWater} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-center text-gray-700">
+                  {disableUtils ? '-' : `${waterUnit.toFixed(1)} u.`}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-sm text-right text-gray-700">
+                  {disableUtils ? '-' : '฿ 7.00'}
+                </td>
+                <td className="py-2 sm:py-4 text-[8px] sm:text-base text-right text-gray-800">
+                  {disableUtils ? '-' : `฿ ${waterBill.toLocaleString('en-US', {minimumFractionDigits: 2})}`}
+                </td>
               </tr>
               {data.hasOther && (
                 <tr className="border-b border-gray-400 bg-yellow-50/50">
@@ -207,8 +226,9 @@ const handleFinish = async () => {
                   <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                   <td className="py-2 sm:py-4 text-center text-[8px] sm:text-sm text-gray-500">-</td>
                   <td className="py-2 sm:py-4 text-right text-[8px] sm:text-sm text-gray-500">-</td>
-                  <td className={`py-2 sm:py-4 text-[9px] sm:text-base text-right font-bold ${isRefund ? 'text-red-600' : 'text-gray-800'}`}>
-                    {otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  <td className={`py-2 sm:py-4 text-[8px] sm:text-base text-right font-bold ${isRefund ? 'text-red-600' : 'text-gray-800'}`}>
+                    {/* 🌟 แสดงสัญลักษณ์ ฿ นำหน้ายอดเงิน Other */}
+                    {isRefund ? '-' : ''}฿ {Math.abs(otherAmt).toLocaleString('en-US', {minimumFractionDigits: 2})}
                   </td>
                 </tr>
               )}
@@ -226,8 +246,9 @@ const handleFinish = async () => {
             </div>
             <div className="text-right">
               <p className="text-[8px] sm:text-sm font-bold text-gray-800 uppercase mb-1 sm:mb-2">TOTAL DUE</p>
-              <p className={`text-[14px] sm:text-3xl font-extrabold border-t-2 sm:border-t-4 border-double border-gray-800 pt-1 sm:pt-2 ${totalAmount < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                THB {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
+              <p className={`text-[12px] sm:text-3xl font-extrabold border-t-2 sm:border-t-4 border-double border-gray-800 pt-1 sm:pt-2 ${totalAmount < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                {/* 🌟 ลบ THB ออก เหลือแค่ ฿ */}
+                {totalAmount < 0 ? '-' : ''}฿ {Math.abs(totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
               </p>
             </div>
           </div>

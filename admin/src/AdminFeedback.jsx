@@ -91,9 +91,17 @@ function AdminFeedback() {
     }
   };
 
+  // 🌟 ปรับปรุงฟังก์ชัน formatDateTime ให้แสดงผลเป็น dd MMMM yyyy
   const formatDateTime = (isoString) => {
     if (!isoString) return '-';
-    return new Date(isoString).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // เปลี่ยนจาก month: 'short' เป็น month: 'long'
+    return new Date(isoString).toLocaleString('en-GB', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   const generateMonthOptions = () => {
@@ -153,7 +161,6 @@ function AdminFeedback() {
 
       <div className="flex-1 p-4 sm:p-8 md:p-12 max-w-7xl mx-auto w-full relative">
         
-        {/* 🌟 UI ส่วนของ Auto-Retry Loading (แก้ไขเป็น fixed ล็อกกลางจอ) */}
         {isLoading && (
           <div className="fixed inset-0 top-[60px] z-[100] flex flex-col items-center justify-center pb-[15vh] bg-[#EAEAEA]/95 backdrop-blur-sm">
             <div className="w-16 h-16 border-4 border-[#8FAFC1] border-t-[#2C3E50] rounded-full animate-spin mb-6 shadow-lg"></div>
@@ -231,7 +238,8 @@ function AdminFeedback() {
                   <div>
                     <div className="flex justify-between items-center border-b pb-2 sm:pb-3 mb-3 sm:mb-4">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800">Room {fb.room}</h3>
-                      <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium uppercase">{formatDateTime(fb.created_at)}</span>
+                      {/* 🌟 แสดงวันที่แบบไม่มี uppercase ครอบ */}
+                      <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">{formatDateTime(fb.created_at)}</span>
                     </div>
                     <p className="text-gray-700 text-sm sm:text-base leading-relaxed italic">"{fb.comment}"</p>
                   </div>

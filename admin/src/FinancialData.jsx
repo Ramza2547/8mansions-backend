@@ -297,7 +297,6 @@ function FinancialData() {
     const element = pdfRef.current;
     const filename = `8Mansions_Financial_${filterMonth.replace(/\s+/g, '_')}.pdf`;
     
-    // 🌟 ออปชั่น pagebreak: { mode: ['css', 'legacy'] } เพื่อให้ html2pdf ไม่ตัดกลางตาราง
     const opt = {
       margin: [0.3, 0.3, 0.3, 0.3], 
       filename: filename, 
@@ -387,18 +386,14 @@ function FinancialData() {
 
   const isAllPaid = !isYearlyView && displayInvoices.length > 0 && displayInvoices.every(inv => inv.isPaid);
 
-  const getOtherDisplay = (inv, isYearly) => {
-    const otherAmt = (Number(inv.totalAmount) - Number(inv.roomRental) - Number(inv.elecBill) - Number(inv.waterBill)) || 0;
-    if (Math.abs(otherAmt) < 0.01) return '0.00';
-    if (isYearly) return otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2});
-
-    let prefix = '';
+  // 🌟 ฟังก์ชันหาคำนำหน้า (Prefix) สำหรับ Other Column
+  const getOtherPrefix = (inv) => {
     const lower = inv.remark ? inv.remark.toLowerCase() : '';
-    if (lower.includes('withholding')) prefix = '(Wds) ';
-    else if (lower.includes('deposit')) prefix = '(Ds) ';
-    else if (lower.includes('outstanding')) prefix = '(Op) ';
-    else if (lower.includes('refund')) prefix = '(Rf) '; 
-    return `${prefix}${otherAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    if (lower.includes('withholding')) return '(Wds) ';
+    if (lower.includes('deposit')) return '(Ds) ';
+    if (lower.includes('outstanding')) return '(Op) ';
+    if (lower.includes('refund')) return '(Rf) '; 
+    return '';
   };
 
   return (
@@ -422,7 +417,7 @@ function FinancialData() {
       </nav>
 
       {/* ==============================================
-          🎯 แม่แบบ PDF (Financial Statement) - เพิ่มคำสั่งป้องกันการตัดครึ่งตาราง
+          🎯 แม่แบบ PDF (Financial Statement) 
           ============================================== */}
       <div className="absolute top-[-9999px] left-0 z-[-1]">
         <div ref={pdfRef} className="w-[720px] bg-white px-8 pt-8 pb-4 text-[#1A1A1A] font-sans mx-auto">
@@ -446,11 +441,11 @@ function FinancialData() {
             <thead style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100 text-gray-700 border-b-2 border-gray-400">
                 <th className="py-3 px-3 font-extrabold w-[12%]">Room</th>
-                <th className="py-3 px-3 font-bold text-right w-[17%]">Rental (THB)</th>
-                <th className="py-3 px-3 font-bold text-right w-[17%]">Electric (THB)</th>
-                <th className="py-3 px-3 font-bold text-right w-[17%]">Water (THB)</th>
-                <th className="py-3 px-3 font-bold text-right w-[17%]">Other (THB)</th>
-                <th className="py-3 px-3 font-extrabold text-right w-[20%] text-black">Total (THB)</th>
+                <th className="py-3 px-3 font-bold text-right w-[17%]">Rental</th>
+                <th className="py-3 px-3 font-bold text-right w-[17%]">Electric</th>
+                <th className="py-3 px-3 font-bold text-right w-[17%]">Water</th>
+                <th className="py-3 px-3 font-bold text-right w-[17%]">Other</th>
+                <th className="py-3 px-3 font-extrabold text-right w-[20%] text-black">Total</th>
               </tr>
             </thead>
             <tbody style={{ pageBreakInside: 'avoid' }}>
@@ -459,20 +454,50 @@ function FinancialData() {
               ) : (
                 paidDisplayInvoices.map((inv, idx) => {
                   const currentRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
+                  const otherAmt = (Number(inv.totalAmount) - Number(inv.roomRental) - Number(inv.elecBill) - Number(inv.waterBill)) || 0;
+                  
                   return (
                     <tr key={idx} className="border-b border-gray-200">
                       <td className="py-2.5 px-3 font-extrabold text-gray-800">{inv.room}</td>
+                      
                       <td className="py-2.5 px-3 text-right text-gray-700">
                         {!isYearlyView && currentRemark && currentRemark !== '-' && (
                           <span className="block text-[9px] text-gray-400 leading-none mb-0.5">({currentRemark})</span>
                         )}
-                        {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                        {Number(inv.roomRental) === 0 ? '-' : (
+                          <span className={Number(inv.roomRental) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                            {Number(inv.roomRental) < 0 ? '-' : ''}฿{Math.abs(Number(inv.roomRental)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-gray-700">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-2.5 px-3 text-right text-gray-700">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                      <td className="py-2.5 px-3 text-right text-gray-500">{getOtherDisplay(inv, isYearlyView)}</td>
-                      <td className="py-2.5 px-3 text-right font-extrabold text-gray-900">
-                        {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      
+                      <td className="py-2.5 px-3 text-right text-gray-700">
+                        {Number(inv.elecBill) === 0 ? '-' : (
+                          <span className={Number(inv.elecBill) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                            {Number(inv.elecBill) < 0 ? '-' : ''}฿{Math.abs(Number(inv.elecBill)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          </span>
+                        )}
+                      </td>
+                      
+                      <td className="py-2.5 px-3 text-right text-gray-700">
+                        {Number(inv.waterBill) === 0 ? '-' : (
+                          <span className={Number(inv.waterBill) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                            {Number(inv.waterBill) < 0 ? '-' : ''}฿{Math.abs(Number(inv.waterBill)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          </span>
+                        )}
+                      </td>
+                      
+                      <td className="py-2.5 px-3 text-right text-gray-500">
+                        {Math.abs(otherAmt) < 0.01 ? '-' : (
+                          <span className={otherAmt < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                            {!isYearlyView ? getOtherPrefix(inv) : ''}
+                            {otherAmt < 0 ? '-' : ''}฿{Math.abs(otherAmt).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          </span>
+                        )}
+                      </td>
+                      
+                      <td className={`py-2.5 px-3 text-right font-extrabold ${Number(inv.totalAmount) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                        {Number(inv.totalAmount) < 0 ? '-' : ''}฿{Math.abs(Number(inv.totalAmount)).toLocaleString('en-US', {minimumFractionDigits: 2})}
                       </td>
                     </tr>
                   )
@@ -483,11 +508,21 @@ function FinancialData() {
               <tfoot style={{ pageBreakInside: 'avoid' }}>
                 <tr className="bg-gray-50 border-t-2 border-gray-400 text-gray-800 font-bold">
                   <td className="py-3 px-3 text-[12px]">TOTAL</td>
-                  <td className="py-3 px-3 text-right">{tableRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-3 px-3 text-right">{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-3 px-3 text-right">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-3 px-3 text-right">{tableOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-3 px-3 text-right text-[13px] text-[#27AE60] font-black">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className={`py-3 px-3 text-right ${tableRental < 0 ? 'text-red-600' : ''}`}>
+                    {tableRental < 0 ? '-' : ''}฿{Math.abs(tableRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
+                  <td className={`py-3 px-3 text-right ${tableElectric < 0 ? 'text-red-600' : ''}`}>
+                    {tableElectric < 0 ? '-' : ''}฿{Math.abs(tableElectric).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
+                  <td className={`py-3 px-3 text-right ${tableWater < 0 ? 'text-red-600' : ''}`}>
+                    {tableWater < 0 ? '-' : ''}฿{Math.abs(tableWater).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
+                  <td className={`py-3 px-3 text-right ${tableOther < 0 ? 'text-red-600' : ''}`}>
+                    {tableOther < 0 ? '-' : ''}฿{Math.abs(tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
+                  <td className={`py-3 px-3 text-right text-[13px] font-black ${tableGrandTotal < 0 ? 'text-red-600' : 'text-[#27AE60]'}`}>
+                    {tableGrandTotal < 0 ? '-' : ''}฿{Math.abs(tableGrandTotal).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </td>
                 </tr>
               </tfoot>
             )}
@@ -502,12 +537,11 @@ function FinancialData() {
             <thead style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100 text-gray-700 border-b-2 border-gray-400">
                 <th className="py-3 px-3 font-extrabold w-[50%]">Description</th>
-                <th className="py-3 px-3 font-bold text-right w-[25%] text-green-700">Income (THB)</th>
-                <th className="py-3 px-3 font-bold text-right w-[25%] text-red-600">Expenses (THB)</th>
+                <th className="py-3 px-3 font-bold text-right w-[25%] text-green-700">Income</th>
+                <th className="py-3 px-3 font-bold text-right w-[25%] text-red-600">Expenses</th>
               </tr>
             </thead>
             
-            {/* 🌟 จัดกลุ่ม A. Total Collected Income ให้อยู่ก้อนเดียวกัน ไม่โดนหั่น */}
             <tbody style={{ pageBreakInside: 'avoid' }}>
               <tr>
                  <td colSpan="3" className="py-2.5 px-3 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
@@ -516,32 +550,39 @@ function FinancialData() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">Room Rental & Other Fees</td>
-                <td className="py-2.5 px-3 text-right text-green-700">{(tableRental + tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-green-700">
+                  <span className={(tableRental + tableOther) < 0 ? 'text-red-600 font-normal' : ''}>
+                    {(tableRental + tableOther) < 0 ? '-' : ''}฿{Math.abs(tableRental + tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </span>
+                </td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">Electricity Collection</td>
-                <td className="py-2.5 px-3 text-right text-green-700">{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-green-700">฿{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
               </tr>
               <tr className="border-b border-gray-200">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">Water Collection</td>
-                <td className="py-2.5 px-3 text-right text-green-700">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-green-700">฿{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
               </tr>
               <tr className="border-b border-gray-200">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)</td>
-                <td className="py-2.5 px-3 text-right text-green-700">{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-green-700">฿{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
               </tr>
               <tr className="border-b-2 border-gray-300 bg-green-50/30">
                 <td className="py-2.5 px-3 text-right font-extrabold text-gray-800">Total Income</td>
-                <td className="py-2.5 px-3 text-right font-black text-[13px] text-green-700">{totalIncomeCollected.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right font-black text-[13px] text-green-700">
+                  <span className={totalIncomeCollected < 0 ? 'text-red-600' : ''}>
+                    {totalIncomeCollected < 0 ? '-' : ''}฿{Math.abs(totalIncomeCollected).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </span>
+                </td>
                 <td className="py-2.5 px-3 text-right"></td>
               </tr>
             </tbody>
 
-            {/* 🌟 จัดกลุ่ม B. Landlord Expenses ให้อยู่ก้อนเดียวกัน ไม่โดนหั่น */}
             <tbody style={{ pageBreakInside: 'avoid' }}>
               <tr>
                  <td colSpan="3" className="py-2.5 px-3 mt-1 bg-gray-50/80 font-extrabold text-gray-500 uppercase text-[10px] tracking-widest border-b border-gray-200">
@@ -551,55 +592,53 @@ function FinancialData() {
               <tr className="border-b border-gray-100">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">PEA Bill (ค่าไฟการไฟฟ้า)</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
-                <td className="py-2.5 px-3 text-right text-red-600">{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-red-600">฿{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">PWA Bill (ค่าน้ำประปา)</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
-                <td className="py-2.5 px-3 text-right text-red-600">{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-red-600">฿{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2.5 px-3 text-gray-700 font-medium">Internet Bill (ค่าอินเตอร์เน็ต)</td>
                 <td className="py-2.5 px-3 text-right text-gray-300">-</td>
-                <td className="py-2.5 px-3 text-right text-red-600">{currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right text-red-600">฿{currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
               </tr>
               
               {isYearlyView ? (
                 <tr className="border-b border-gray-200">
                   <td className="py-2.5 px-3 text-gray-700 font-medium">Other Custom Expenses</td>
                   <td className="py-2.5 px-3 text-right text-gray-300">-</td>
-                  <td className="py-2.5 px-3 text-right text-red-600">{currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-2.5 px-3 text-right text-red-600">฿{currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
               ) : (
                 currentCustomList.map((exp, idx) => (
                   <tr key={exp.id || idx} className="border-b border-gray-200">
                     <td className="py-2.5 px-3 text-gray-700 font-medium">{exp.detail || 'ไม่ระบุชื่อรายการ'}</td>
                     <td className="py-2.5 px-3 text-right text-gray-300">-</td>
-                    <td className="py-2.5 px-3 text-right text-red-600">{Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-3 text-right text-red-600">฿{Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   </tr>
                 ))
               )}
               <tr className="border-b-4 border-gray-800 bg-red-50/30">
                 <td className="py-2.5 px-3 text-right font-extrabold text-gray-800">Total Expenses</td>
                 <td className="py-2.5 px-3 text-right"></td>
-                <td className="py-2.5 px-3 text-right font-black text-[13px] text-red-600">{totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td className="py-2.5 px-3 text-right font-black text-[13px] text-red-600">฿{totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
               </tr>
             </tbody>
 
-            {/* 🌟 ให้อัตรากำไร (Net Profit) ไม่ถูกหั่นครึ่ง */}
             <tfoot style={{ pageBreakInside: 'avoid' }}>
               <tr className="bg-gray-100">
                 <td colSpan="2" className="py-4 px-3 text-right font-black text-[14px] uppercase tracking-widest text-[#1A1A1A]">
                   Net Profit (กำไรสุทธิ)
                 </td>
                 <td className={`py-4 px-3 text-right font-black text-[16px] ${finalWebProfit < 0 ? 'text-red-600' : 'text-[#27AE60]'}`}>
-                  {finalWebProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  {finalWebProfit < 0 ? '-' : ''}฿{Math.abs(finalWebProfit).toLocaleString('en-US', {minimumFractionDigits: 2})}
                 </td>
               </tr>
             </tfoot>
           </table>
 
-          {/* 🌟 ให้ข้อความหมายเหตุด้านล่างสุดไม่ถูกหั่นครึ่ง */}
           <div className="flex flex-col items-end mt-2 text-[#2C3E50]" style={{ pageBreakInside: 'avoid' }}>
             <p className="font-black italic text-[15px] tracking-wide mb-1">" {THBText(finalWebProfit)} "</p>
             <p className="font-black italic text-[13px] text-gray-500 tracking-widest uppercase">" {ENGText(finalWebProfit)} "</p>
@@ -650,11 +689,11 @@ function FinancialData() {
               <thead className="bg-gray-100 text-gray-700 border-b-2 border-gray-200">
                 <tr>
                   <th className="py-4 px-4 font-bold">Room</th>
-                  <th className="py-4 px-4 font-bold text-right">Rental (THB)</th>
-                  <th className="py-4 px-4 font-bold text-right">Electric (THB)</th>
-                  <th className="py-4 px-4 font-bold text-right">Water (THB)</th>
-                  <th className="py-4 px-4 font-bold text-right">Other (THB)</th>
-                  <th className="py-4 px-4 font-bold text-right text-[#2C3E50]">Total (THB)</th>
+                  <th className="py-4 px-4 font-bold text-right">Rental</th>
+                  <th className="py-4 px-4 font-bold text-right">Electric</th>
+                  <th className="py-4 px-4 font-bold text-right">Water</th>
+                  <th className="py-4 px-4 font-bold text-right">Other</th>
+                  <th className="py-4 px-4 font-bold text-right text-[#2C3E50]">Total</th>
                   
                   {!isYearlyView && (
                     <th className="py-2 px-4 font-bold text-center border-l border-gray-200">
@@ -676,6 +715,8 @@ function FinancialData() {
                 ) : (
                   displayInvoices.map((inv, index) => {
                     const webRemark = inv.roomRentalRemark || inv.room_rental_remark || '';
+                    const otherAmt = (Number(inv.totalAmount) - Number(inv.roomRental) - Number(inv.elecBill) - Number(inv.waterBill)) || 0;
+                    
                     return (
                       <tr key={inv.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-gray-50/50' : 'bg-white'} hover:bg-yellow-50/50 transition-colors`}>
                         <td className="py-3 px-4 font-bold text-gray-800 whitespace-nowrap">{inv.room}</td>
@@ -683,13 +724,36 @@ function FinancialData() {
                           {!isYearlyView && webRemark && webRemark !== '-' && (
                             <span className="text-[11px] text-gray-400 mr-1 font-medium">({webRemark})</span>
                           )}
-                          {Number(inv.roomRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          {Number(inv.roomRental) === 0 ? '-' : (
+                            <span className={Number(inv.roomRental) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                              {Number(inv.roomRental) < 0 ? '-' : ''}฿{Math.abs(Number(inv.roomRental)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </span>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.elecBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">{Number(inv.waterBill).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                        <td className="py-3 px-4 text-right text-gray-500 whitespace-nowrap">{getOtherDisplay(inv, isYearlyView)}</td>
+                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
+                          {Number(inv.elecBill) === 0 ? '-' : (
+                            <span className={Number(inv.elecBill) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                              {Number(inv.elecBill) < 0 ? '-' : ''}฿{Math.abs(Number(inv.elecBill)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right text-gray-700 whitespace-nowrap">
+                          {Number(inv.waterBill) === 0 ? '-' : (
+                            <span className={Number(inv.waterBill) < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                              {Number(inv.waterBill) < 0 ? '-' : ''}฿{Math.abs(Number(inv.waterBill)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right text-gray-500 whitespace-nowrap">
+                          {Math.abs(otherAmt) < 0.01 ? '-' : (
+                            <span className={otherAmt < 0 ? 'text-red-600 font-normal' : 'font-normal'}>
+                              {!isYearlyView ? getOtherPrefix(inv) : ''}
+                              {otherAmt < 0 ? '-' : ''}฿{Math.abs(otherAmt).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </span>
+                          )}
+                        </td>
                         <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${Number(inv.totalAmount) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                          {Number(inv.totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                          {Number(inv.totalAmount) < 0 ? '-' : ''}฿{Math.abs(Number(inv.totalAmount)).toLocaleString('en-US', {minimumFractionDigits: 2})}
                         </td>
                         
                         {!isYearlyView && (
@@ -718,11 +782,21 @@ function FinancialData() {
                 <tfoot className="bg-[#2C3E50] text-white font-bold">
                   <tr>
                     <td className="py-4 px-4 text-center uppercase tracking-wider whitespace-nowrap">Income Summary</td>
-                    <td className="py-4 px-4 text-right text-blue-200 whitespace-nowrap">{tableRental.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-4 px-4 text-right text-yellow-200 whitespace-nowrap">{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-4 px-4 text-right text-blue-200 whitespace-nowrap">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-4 px-4 text-right text-red-200 whitespace-nowrap">{tableOther.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="py-4 px-4 text-right text-[#2ECC71] text-lg whitespace-nowrap">{tableGrandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className={`py-4 px-4 text-right whitespace-nowrap ${tableRental < 0 ? 'text-red-400' : 'text-blue-200'}`}>
+                      {tableRental < 0 ? '-' : ''}฿{Math.abs(tableRental).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
+                    <td className={`py-4 px-4 text-right whitespace-nowrap ${tableElectric < 0 ? 'text-red-400' : 'text-yellow-200'}`}>
+                      {tableElectric < 0 ? '-' : ''}฿{Math.abs(tableElectric).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
+                    <td className={`py-4 px-4 text-right whitespace-nowrap ${tableWater < 0 ? 'text-red-400' : 'text-blue-200'}`}>
+                      {tableWater < 0 ? '-' : ''}฿{Math.abs(tableWater).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
+                    <td className={`py-4 px-4 text-right whitespace-nowrap ${tableOther < 0 ? 'text-red-400' : 'text-red-200'}`}>
+                      {tableOther < 0 ? '-' : ''}฿{Math.abs(tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
+                    <td className={`py-4 px-4 text-right text-lg whitespace-nowrap ${tableGrandTotal < 0 ? 'text-red-500' : 'text-[#2ECC71]'}`}>
+                      {tableGrandTotal < 0 ? '-' : ''}฿{Math.abs(tableGrandTotal).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
                     {!isYearlyView && <td colSpan="2" className="py-4 px-4"></td>}
                   </tr>
                 </tfoot>
@@ -754,7 +828,7 @@ function FinancialData() {
                       Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">🪙</span>
+                      <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
                       <input 
                         type="number" 
                         value={currentWashingMachineTotal || ''} 
@@ -776,21 +850,21 @@ function FinancialData() {
                     <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-500 uppercase">PEA Cost</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">⚡</span>
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
                         <input type="number" value={currentPea || ''} onChange={(e) => handleUtilityChange('pea', e.target.value)} placeholder="บิลค่าไฟ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F1C40F] outline-none transition-shadow" />
                       </div>
                     </div>
                     <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-500 uppercase">PWA Cost</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">💧</span>
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
                         <input type="number" value={currentPwa || ''} onChange={(e) => handleUtilityChange('pwa', e.target.value)} placeholder="บิลค่าน้ำ..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3498DB] outline-none transition-shadow" />
                       </div>
                     </div>
                     <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-500 uppercase">Internet Cost</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">🌐</span>
+                        <span className="absolute left-3 top-2.5 font-bold text-gray-400">฿</span>
                         <input type="number" value={currentInternet || ''} onChange={(e) => handleUtilityChange('internet', e.target.value)} placeholder="บิลค่าอินเตอร์เน็ต..." className="w-full pl-9 p-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9B59B6] outline-none transition-shadow" />
                       </div>
                     </div>
@@ -859,30 +933,34 @@ function FinancialData() {
               <thead className="bg-[#2C3E50] text-white">
                 <tr>
                   <th className="py-3 px-4 font-bold border-b border-gray-600">Category</th>
-                  <th className="py-3 px-4 font-bold text-right border-b border-gray-600">Income (THB)</th>
-                  <th className="py-3 px-4 font-bold text-right border-b border-gray-600">Expenses (THB)</th>
+                  <th className="py-3 px-4 font-bold text-right border-b border-gray-600">Income</th>
+                  <th className="py-3 px-4 font-bold text-right border-b border-gray-600">Expenses</th>
                 </tr>
               </thead>
               <tbody className="bg-white text-gray-700">
                 <tr className="bg-gray-100"><td colSpan="3" className="py-2 px-4 font-extrabold text-gray-500 uppercase text-xs">Collected Income</td></tr>
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 font-bold whitespace-nowrap">Room Rental & Other</td>
-                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{(tableRental + tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">
+                    <span className={(tableRental + tableOther) < 0 ? 'text-red-600 font-normal' : ''}>
+                      {(tableRental + tableOther) < 0 ? '-' : ''}฿{Math.abs(tableRental + tableOther).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 font-bold whitespace-nowrap">Electricity Collection</td>
-                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">฿{tableElectric.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 font-bold whitespace-nowrap">Water Collection</td>
-                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">฿{tableWater.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-3 px-4 font-bold whitespace-nowrap">Washing Machine Coin (ค่าเหรียญเครื่องซักผ้า)</td>
-                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-green-600 whitespace-nowrap">฿{currentWashingMachineTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
                 </tr>
 
@@ -890,31 +968,31 @@ function FinancialData() {
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">PEA Bill (ค่าไฟการไฟฟ้า)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">฿{currentPea.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">PWA Bill (ค่าน้ำประปา)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">฿{currentPwa.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="border-b border-gray-100 hover:bg-red-50/50">
                   <td className="py-3 px-4 whitespace-nowrap text-gray-600">Internet Bill (ค่าอินเตอร์เน็ต)</td>
                   <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">฿{currentInternet.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 
                 {isYearlyView ? (
                   <tr className="hover:bg-red-50/50">
                     <td className="py-3 px-4 whitespace-nowrap text-gray-600 font-bold">Other Custom Expenses (รวมรายจ่ายอื่น ๆ)</td>
                     <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                    <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">฿{currentCustomTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                   </tr>
                 ) : (
                   currentCustomList.map((exp, idx) => (
                     <tr key={exp.id || idx} className="border-b border-gray-100 hover:bg-red-50/50">
                       <td className="py-3 px-4 whitespace-nowrap text-gray-600">{exp.detail || 'ไม่ระบุชื่อรายการ'}</td>
                       <td className="py-3 px-4 text-right text-gray-400 whitespace-nowrap">-</td>
-                      <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">{Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                      <td className="py-3 px-4 text-right font-bold text-red-500 whitespace-nowrap">฿{Number(exp.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     </tr>
                   ))
                 )}
@@ -923,14 +1001,18 @@ function FinancialData() {
               <tfoot className="bg-[#1A1A1A] text-white">
                 <tr>
                   <td className="py-5 px-4 font-black uppercase text-lg tracking-widest whitespace-nowrap">Net Profit (กำไรสุทธิ)</td>
-                  <td className="py-5 px-4 text-right font-bold text-gray-400 whitespace-nowrap">{totalIncomeCollected.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td className="py-5 px-4 text-right font-bold text-red-400 whitespace-nowrap">{totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                  <td className="py-5 px-4 text-right font-bold text-gray-400 whitespace-nowrap">
+                    <span className={totalIncomeCollected < 0 ? 'text-red-500' : ''}>
+                      {totalIncomeCollected < 0 ? '-' : ''}฿{Math.abs(totalIncomeCollected).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </span>
+                  </td>
+                  <td className="py-5 px-4 text-right font-bold text-red-400 whitespace-nowrap">฿{totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>
                 <tr className="bg-[#0f0f0f]">
                   <td colSpan="3" className="py-6 px-6 text-right whitespace-nowrap">
                     <span className="text-gray-400 font-bold mr-4 text-lg">Total Result:</span>
                     <span className={`font-black text-4xl border-b-[6px] pb-1 leading-none ${finalWebProfit < 0 ? 'text-red-500 border-red-500' : 'text-[#2ECC71] border-[#2ECC71]'}`}>
-                      ฿{finalWebProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                      {finalWebProfit < 0 ? '-' : ''}฿{Math.abs(finalWebProfit).toLocaleString('en-US', {minimumFractionDigits: 2})}
                     </span>
                   </td>
                 </tr>
@@ -1004,7 +1086,7 @@ function FinancialData() {
             disabled={isUnsaved}
             className={`${isUnsaved ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#8E44AD] hover:bg-[#732D91] text-white active:scale-95'} font-bold py-3 px-8 rounded-full shadow-md transition-all flex items-center justify-center gap-2`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002-2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             View Dashboard
           </button>
         </div>

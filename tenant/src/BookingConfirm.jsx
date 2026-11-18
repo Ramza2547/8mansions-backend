@@ -14,18 +14,76 @@ function BookingConfirm() {
   // State สำหรับ Custom Alert Popup
   const [alertMessage, setAlertMessage] = useState({ show: false, type: '', text: '' });
 
+  // 🌟 ฟังก์ชันบังคับแปลงวันที่ให้เป็น "dd MMMM yyyy" สำหรับแสดงผลบนหน้าจอเท่านั้น
   const formatDateDisplay = (dateStr) => {
-    if (!dateStr) return '-';
-    return dateStr; 
+    if (!dateStr || dateStr === '-') return '-';
+    
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June", 
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    try {
+      // 1. ถ้ามาเป็น dd/mm/yyyy
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        const day = parts[0].padStart(2, '0');
+        const monthIndex = parseInt(parts[1], 10) - 1;
+        const year = parts[2];
+        return `${day} ${monthNames[monthIndex]} ${year}`;
+      } 
+      // 2. ถ้ามาเป็น yyyy-mm-dd
+      else if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        const year = parts[0];
+        const monthIndex = parseInt(parts[1], 10) - 1;
+        const day = parts[2].padStart(2, '0');
+        return `${day} ${monthNames[monthIndex]} ${year}`;
+      }
+      
+      // 3. ถ้าเป็นรูปแบบอื่น หรือแปลงไว้แล้ว (dd MMMM yyyy) ให้คืนค่าเดิม
+      return dateStr;
+    } catch (error) {
+      return dateStr; // ถ้า Error คืนค่าเดิม
+    }
   };
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
     
+    // 🌟 ฟังก์ชันแปลงรูปแบบวันที่ให้เป็น yyyy-mm-dd ก่อนส่งไป Backend
     const convertToDbDate = (dateStr) => {
-      if (!dateStr || !dateStr.includes('/')) return dateStr;
-      const [day, month, year] = dateStr.split('/');
-      return `${year}-${month}-${day}`;
+      if (!dateStr || dateStr === '-') return null;
+      
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+      ];
+
+      try {
+        // 1. กรณีข้อมูลมาแบบ dd MMMM yyyy (รูปแบบใหม่ที่มีการเว้นวรรค)
+        if (dateStr.includes(' ') && dateStr.split(' ').length === 3) {
+          const parts = dateStr.split(' ');
+          const day = parts[0].padStart(2, '0');
+          const monthIndex = monthNames.indexOf(parts[1]);
+          if (monthIndex !== -1) {
+            const month = String(monthIndex + 1).padStart(2, '0');
+            const year = parts[2];
+            return `${year}-${month}-${day}`;
+          }
+        }
+        
+        // 2. กรณีข้อมูลยังหลงเหลือแบบ dd/mm/yyyy
+        if (dateStr.includes('/')) {
+          const [day, month, year] = dateStr.split('/');
+          return `${year}-${month}-${day}`;
+        }
+
+        // 3. ถ้าเป็น yyyy-mm-dd อยู่แล้ว ก็คืนค่าเดิมกลับไป
+        return dateStr;
+      } catch (error) {
+        return dateStr;
+      }
     };
 
     const dataToSubmit = { 
@@ -106,6 +164,7 @@ function BookingConfirm() {
             </div>
             <div className="flex flex-col border-b pb-2">
               <span className="font-bold text-gray-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">Date of Birth</span>
+              {/* 🌟 แสดงผลผ่านฟังก์ชัน formatDateDisplay */}
               <span className="text-gray-800 font-semibold">{formatDateDisplay(formData?.date_of_birth)}</span>
             </div>
 
@@ -121,6 +180,7 @@ function BookingConfirm() {
                 </div>
                 <div className="flex flex-col border-b pb-2">
                   <span className="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">Date of Birth (T2)</span>
+                  {/* 🌟 แสดงผลผ่านฟังก์ชัน formatDateDisplay */}
                   <span className="text-gray-800 font-semibold">{formatDateDisplay(formData?.date_of_birth_2)}</span>
                 </div>
               </div>

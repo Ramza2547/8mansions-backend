@@ -121,6 +121,54 @@ class HistoryLogViewSet(viewsets.ModelViewSet):
 if os.name == 'nt':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+# ตารางแปลงรหัสประเทศ (ISO 3166-1 alpha-3 จาก MRZ และ alpha-2) เป็นชื่อเต็ม
+COUNTRY_CODE_MAP = {
+    'THA': 'Thailand', 'TH': 'Thailand',
+    'RUS': 'Russia', 'RU': 'Russia',
+    'JPN': 'Japan', 'JP': 'Japan',
+    'CHN': 'China', 'CN': 'China',
+    'USA': 'United States', 'US': 'United States',
+    'GBR': 'United Kingdom', 'GB': 'United Kingdom', 'UK': 'United Kingdom',
+    'DEU': 'Germany', 'D': 'Germany', 'DE': 'Germany',
+    'FRA': 'France', 'FR': 'France',
+    'AUS': 'Australia', 'AU': 'Australia',
+    'KOR': 'South Korea', 'KR': 'South Korea',
+    'IND': 'India', 'IN': 'India',
+    'MYS': 'Malaysia', 'MY': 'Malaysia',
+    'SGP': 'Singapore', 'SG': 'Singapore',
+    'IDN': 'Indonesia', 'ID': 'Indonesia',
+    'VNM': 'Vietnam', 'VN': 'Vietnam',
+    'PHL': 'Philippines', 'PH': 'Philippines',
+    'MMR': 'Myanmar', 'MM': 'Myanmar',
+    'LAO': 'Laos', 'LA': 'Laos',
+    'KHM': 'Cambodia', 'KH': 'Cambodia',
+    'TWN': 'Taiwan', 'TW': 'Taiwan',
+    'HKG': 'Hong Kong', 'HK': 'Hong Kong',
+    'CAN': 'Canada', 'CA': 'Canada',
+    'NZL': 'New Zealand', 'NZ': 'New Zealand',
+    'ITA': 'Italy', 'IT': 'Italy',
+    'ESP': 'Spain', 'ES': 'Spain',
+    'NLD': 'Netherlands', 'NL': 'Netherlands',
+    'SWE': 'Sweden', 'SE': 'Sweden',
+    'NOR': 'Norway', 'NO': 'Norway',
+    'DNK': 'Denmark', 'DK': 'Denmark',
+    'FIN': 'Finland', 'FI': 'Finland',
+    'CHE': 'Switzerland', 'CH': 'Switzerland',
+    'AUT': 'Austria', 'AT': 'Austria',
+    'BEL': 'Belgium', 'BE': 'Belgium',
+    'POL': 'Poland', 'PL': 'Poland',
+    'UKR': 'Ukraine', 'UA': 'Ukraine',
+    'KAZ': 'Kazakhstan', 'KZ': 'Kazakhstan',
+    'ISR': 'Israel', 'IL': 'Israel',
+    'ARE': 'United Arab Emirates', 'AE': 'United Arab Emirates',
+    'SAU': 'Saudi Arabia', 'SA': 'Saudi Arabia',
+    'TUR': 'Turkey', 'TR': 'Turkey',
+    'BRA': 'Brazil', 'BR': 'Brazil',
+    'ZAF': 'South Africa', 'ZA': 'South Africa',
+    'IRL': 'Ireland', 'IE': 'Ireland',
+    'PRT': 'Portugal', 'PT': 'Portugal',
+}
+
 class PassportOCRView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -188,7 +236,7 @@ class PassportOCRView(APIView):
 
                 return Response({
                     'name': full_name,
-                    'nationality': 'TH',
+                    'nationality': 'Thailand',
                     'date_of_birth': dob_formatted
                 })
 
@@ -215,9 +263,11 @@ class PassportOCRView(APIView):
             dob_formatted = ""
 
             if len(line2) >= 20:
-                nationality = line2[10:13].replace('<', '')
-                dob_raw = line2[13:19]
+                nat_code = line2[10:13].replace('<', '').upper().strip()
+                # แปลงรหัสประเทศเป็นชื่อเต็ม (ถ้าไม่เจอในตารางให้ใช้รหัสเดิม)
+                nationality = COUNTRY_CODE_MAP.get(nat_code, nat_code)
                 
+                dob_raw = line2[13:19]
                 if dob_raw.isdigit():
                     year = int(dob_raw[0:2])
                     month = dob_raw[2:4]

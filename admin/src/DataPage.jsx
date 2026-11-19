@@ -116,27 +116,58 @@ function DataPage() {
     });
   };
 
+  // 🌟 ฟังก์ชันแปลงวันที่กลับเป็น YYYY-MM-DD ก่อนส่งให้ Django
+  const toApiDate = (dateStr) => {
+    if (!dateStr || dateStr === '-') return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+
+    let dateObj;
+    if (dateStr.includes('/') && dateStr.split('/').length === 3) {
+      const parts = dateStr.split('/');
+      dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    } else {
+      dateObj = new Date(dateStr);
+    }
+
+    if (isNaN(dateObj.getTime())) return null;
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const trackChanges = (original, edited) => {
     const changes = [];
     if (original.name !== edited.name) changes.push({ field: 'T1 Name', before: original.name || '-', after: edited.name });
     if (original.nationality !== edited.nationality) changes.push({ field: 'T1 Nationality', before: original.nationality || '-', after: edited.nationality });
-    if (original.date_of_birth !== edited.date_of_birth) changes.push({ field: 'T1 DOB', before: formatDate(original.date_of_birth), after: formatDate(edited.date_of_birth) });
+    if (toApiDate(original.date_of_birth) !== toApiDate(edited.date_of_birth)) changes.push({ field: 'T1 DOB', before: formatDate(original.date_of_birth), after: formatDate(edited.date_of_birth) });
     
     if (original.name_2 !== edited.name_2) changes.push({ field: 'T2 Name', before: original.name_2 || '-', after: edited.name_2 });
-    if (original.nationality !== edited.nationality_2) changes.push({ field: 'T2 Nationality', before: original.nationality_2 || '-', after: edited.nationality_2 });
-    if (original.date_of_birth_2 !== edited.date_of_birth_2) changes.push({ field: 'T2 DOB', before: formatDate(original.date_of_birth_2), after: formatDate(edited.date_of_birth_2) });
+    if (original.nationality_2 !== edited.nationality_2) changes.push({ field: 'T2 Nationality', before: original.nationality_2 || '-', after: edited.nationality_2 });
+    if (toApiDate(original.date_of_birth_2) !== toApiDate(edited.date_of_birth_2)) changes.push({ field: 'T2 DOB', before: formatDate(original.date_of_birth_2), after: formatDate(edited.date_of_birth_2) });
 
-    if (original.lease_start !== edited.lease_start) changes.push({ field: 'Lease Start', before: formatDate(original.lease_start), after: formatDate(edited.lease_start) });
-    if (original.lease_end !== edited.lease_end) changes.push({ field: 'Lease End', before: formatDate(original.lease_end), after: formatDate(edited.lease_end) });
+    if (toApiDate(original.lease_start) !== toApiDate(edited.lease_start)) changes.push({ field: 'Lease Start', before: formatDate(original.lease_start), after: formatDate(edited.lease_start) });
+    if (toApiDate(original.lease_end) !== toApiDate(edited.lease_end)) changes.push({ field: 'Lease End', before: formatDate(original.lease_end), after: formatDate(edited.lease_end) });
     return changes;
   };
 
   const handleSaveEdit = async () => {
     try {
       const originalCustomer = customers.find(c => c.id === editingCustomer.id);
-      await axios.put(`https://eightmansions-backend-1.onrender.com/api/customers/${editingCustomer.id}/update/`, editingCustomer);
+
+      // 🌟 แปลงวันที่ทุกช่องเป็น YYYY-MM-DD ก่อนส่งให้ Django
+      const payload = {
+        ...editingCustomer,
+        date_of_birth: toApiDate(editingCustomer.date_of_birth),
+        date_of_birth_2: toApiDate(editingCustomer.date_of_birth_2),
+        lease_start: toApiDate(editingCustomer.lease_start),
+        lease_end: toApiDate(editingCustomer.lease_end),
+      };
+
+      await axios.put(`https://eightmansions-backend-1.onrender.com/api/customers/${editingCustomer.id}/update/`, payload);
       
-      const detectedChanges = trackChanges(originalCustomer, editingCustomer);
+      const detectedChanges = trackChanges(originalCustomer, payload);
       if (detectedChanges.length > 0) {
         try {
           await axios.post('https://eightmansions-backend-1.onrender.com/api/history/', {

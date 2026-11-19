@@ -156,7 +156,7 @@ class PassportOCRView(APIView):
                                       'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'}
                         month = months_map.get(month_str, '01')
                         if year > 2400: year -= 543
-                        dob_formatted = f"{day}/{month}/{year}"
+                        dob_formatted = f"{year}-{month}-{day}"
 
                     line_lower = line.lower()
                     if 'name' in line_lower and 'last' not in line_lower and not raw_name:
@@ -224,7 +224,7 @@ class PassportOCRView(APIView):
                     day = dob_raw[4:6]
                     current_year = int(datetime.now().strftime("%y"))
                     full_year = 2000 + year if year <= current_year else 1900 + year
-                    dob_formatted = f"{day}/{month}/{full_year}"
+                    dob_formatted = f"{full_year}-{month}-{day}"
 
             return Response({
                 'name': full_name,

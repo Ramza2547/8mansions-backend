@@ -19,23 +19,9 @@ function GuestForm() {
     name_2: '', nationality_2: '', date_of_birth_2: '',
   });
 
-  useEffect(() => {
-    if (ocrData) {
-      setFormData(prev => ({
-        ...prev,
-        name: ocrData.tenant1?.name || '',
-        nationality: ocrData.tenant1?.nationality || '',
-        date_of_birth: ocrData.tenant1?.date_of_birth || '',
-        name_2: ocrData.tenant2?.name || '',
-        nationality_2: ocrData.tenant2?.nationality || '',
-        date_of_birth_2: ocrData.tenant2?.date_of_birth || '',
-      }));
-    }
-  }, [ocrData]);
-
   // 🌟 ฟังก์ชันแปลง Date Object ให้ออกมาเป็น "dd MMMM yyyy"
   const formatDateToDMY = (dateObj) => {
-    if (!dateObj) return '';
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
     return dateObj.toLocaleDateString('en-GB', {
       day: '2-digit', 
       month: 'long', 
@@ -43,13 +29,40 @@ function GuestForm() {
     });
   };
 
-  // 🌟 ฟังก์ชันแปลง String กลับเป็น Date Object (รองรับรูปแบบ dd MMMM yyyy)
+  // 🌟 ฟังก์ชันแปลง String กลับเป็น Date Object (แก้บั๊กวัน/เดือนสลับกันจาก OCR)
   const parseDMYToDate = (dateStr) => {
     if (!dateStr) return null;
+
+    // 1. กรณีมาจาก OCR เป็น DD/MM/YYYY
+    if (dateStr.includes('/')) {
+      const [d, m, y] = dateStr.split('/');
+      return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    }
+
+    // 2. กรณีมาจาก DB เป็น YYYY-MM-DD
+    if (dateStr.includes('-')) {
+      const [y, m, d] = dateStr.split('-');
+      return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    }
+
+    // 3. กรณีเป็น dd MMMM yyyy อยู่แล้ว
     const dateObj = new Date(dateStr);
-    if (isNaN(dateObj.getTime())) return null;
-    return dateObj;
+    return isNaN(dateObj.getTime()) ? null : dateObj;
   };
+
+  useEffect(() => {
+    if (ocrData) {
+      setFormData(prev => ({
+        ...prev,
+        name: ocrData.tenant1?.name || '',
+        nationality: ocrData.tenant1?.nationality || '',
+        date_of_birth: formatDateToDMY(parseDMYToDate(ocrData.tenant1?.date_of_birth)),
+        name_2: ocrData.tenant2?.name || '',
+        nationality_2: ocrData.tenant2?.nationality || '',
+        date_of_birth_2: formatDateToDMY(parseDMYToDate(ocrData.tenant2?.date_of_birth)),
+      }));
+    }
+  }, [ocrData]);
 
   // 🌟 ฟังก์ชันคำนวณวันหมดสัญญา
   const calculateEndDate = (startDateStr, months) => {
@@ -57,8 +70,7 @@ function GuestForm() {
     const dateObj = parseDMYToDate(startDateStr);
     if (!dateObj) return '';
     
-    // บวกเดือนเพิ่ม
-    dateObj.setMonth(dateObj.getMonth() + parseInt(months));
+    dateObj.setMonth(dateObj.getMonth() + parseInt(months, 10));
     return formatDateToDMY(dateObj);
   };
 
